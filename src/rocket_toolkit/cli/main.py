@@ -1,0 +1,1440 @@
+import argparse
+import os
+import time
+import datetime
+from rocket_toolkit.core import flight_simulator
+from rocket_toolkit.core import thermal_analyzer
+from rocket_toolkit import config
+from rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
+from rocket_toolkit.plotting.fin_animation import create_fin_temperature_animation
+from rocket_toolkit.core.stability_analyzer import RocketStability, plot_rocket_stability
+from rocket_toolkit.geometry.component_manager import ComponentData
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+import numpy as np
+from rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
+
+def load_team_data():
+    """Load and initialize team data before any simulation (optimized with timing)"""
+    load_start = time.time()
+    component_manager = ComponentData()
+    component_manager.update_from_team_files()
+    component_manager.update_config()
+    
+    load_time = time.time() - load_start
+    print(f"Team data loaded in {load_time:.3f} seconds")
+    
+    # Return the component manager for later use
+    return component_manager
+
+def create_initial_conditions_page(simulation_type, **kwargs):
+    """
+    Create comprehensive initial conditions pages for any simulation type
+    Can create multiple pages if content is too long
+    
+    Args:
+        simulation_type: Type of simulation ("flight", "material_comparison", "stability", "trajectory")
+        **kwargs: Additional parameters specific to the simulation type
+    """
+    # Get current timestamp
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Create the content based on simulation type
+    if simulation_type == "flight":
+        content = _create_flight_conditions_content(**kwargs)
+    elif simulation_type == "material_comparison":
+        content = _create_material_comparison_conditions_content(**kwargs)
+    elif simulation_type == "stability":
+        content = _create_stability_conditions_content(**kwargs)
+    elif simulation_type == "trajectory":
+        content = _create_trajectory_conditions_content(**kwargs)
+    else:
+        content = "Unknown simulation type"
+    
+    # Split content into lines
+    content_lines = content.split('\n')
+    
+    # Calculate how many lines we can fit per page
+    available_height = 0.85  # From 0.91 to 0.06 (85% of page height)
+    line_height = 0.012  # Approximate line height in page coordinates
+    max_lines_per_page = int(available_height / line_height)
+    
+    figures = []
+    
+    # Split content into pages if necessary
+    total_lines = len(content_lines)
+    current_start = 0
+    page_num = 1
+    
+    while current_start < total_lines:
+        # Create a new figure for this page
+        fig = plt.figure(figsize=(11, 8.5))  # Standard letter size
+        fig.patch.set_facecolor('white')
+        
+        # Remove axes for text-only page
+        ax = fig.add_subplot(111)
+        ax.axis('off')
+        
+        # Title (only on first page)
+        if page_num == 1:
+            title = f"INITIAL CONDITIONS AND PARAMETERS\n{simulation_type.upper()} SIMULATION"
+            ax.text(0.5, 0.96, title, ha='center', va='top', fontsize=14, fontweight='bold', 
+                    transform=ax.transAxes)
+            
+            # Timestamp
+            ax.text(0.5, 0.91, f"Generated: {timestamp}", ha='center', va='top', fontsize=10, 
+                    transform=ax.transAxes, style='italic')
+            
+            content_start_y = 0.88
+        else:
+            # Continuation page
+            title = f"INITIAL CONDITIONS (CONTINUED) - PAGE {page_num}\n{simulation_type.upper()} SIMULATION"
+            ax.text(0.5, 0.96, title, ha='center', va='top', fontsize=14, fontweight='bold', 
+                    transform=ax.transAxes)
+            content_start_y = 0.91
+        
+        # Calculate end index for this page
+        current_end = min(current_start + max_lines_per_page, total_lines)
+        
+        # Get content for this page
+        page_content = '\n'.join(content_lines[current_start:current_end])
+        
+        # Add the content for this page
+        ax.text(0.05, content_start_y, page_content, ha='left', va='top', fontsize=8, 
+                fontfamily='monospace', transform=ax.transAxes, linespacing=1.1)
+        
+        # Add page number at bottom if multiple pages
+        if total_lines > max_lines_per_page:
+            total_pages = (total_lines + max_lines_per_page - 1) // max_lines_per_page  # Ceiling division
+            ax.text(0.95, 0.02, f"Page {page_num} of {total_pages}", ha='right', va='bottom', 
+                    fontsize=8, transform=ax.transAxes, style='italic')
+        
+        figures.append(fig)
+        
+        # Move to next page
+        current_start = current_end
+        page_num += 1
+    
+    return figures
+
+def _create_flight_conditions_content(material_name=None, component_manager=None, fast_mode=False, **kwargs):
+    """Create content for flight simulation initial conditions"""
+    content = []
+    
+    # Simulation Parameters
+    content.append("="*70)
+    content.append("SIMULATION PARAMETERS")
+    content.append("="*70)
+    content.append(f"Fin Material:               {material_name}")
+    content.append(f"Fast Mode:                  {fast_mode}")
+    content.append(f"Time Step (dt):             {config.dt} s")
+    content.append(f"After Top Reached:          {config.afterTopReached} cycles")
+    content.append(f"Animation Enabled:          {getattr(config, 'create_temperature_animation', False)}")
+    content.append("")
+    
+    # Component Masses and Positions
+    content.append("="*70)
+    content.append("COMPONENT MASSES AND POSITIONS")
+    content.append("="*70)
+    
+    if component_manager and component_manager.get_component_data():
+        components = component_manager.get_component_data()
+        content.append(f"{'Component':<25} {'Mass (kg)':<12} {'Position (m)':<15} {'Team':<10}")
+        content.append("-"*70)
+        
+        total_dry_mass = 0
+        propellant_mass = 0
+        
+        for name, data in components.items():
+            mass = data.get('mass', 0)
+            position = data.get('position', 0)
+            team = data.get('team', 'N/A')
+            
+            content.append(f"{name:<25} {mass:<12.3f} {position:<15.3f} {team:<10}")
+            
+            if 'propellant' in name.lower():
+                propellant_mass += mass
+            else:
+                total_dry_mass += mass
+        
+        content.append("-"*70)
+        content.append(f"{'Total Dry Mass':<25} {total_dry_mass:<12.3f}")
+        content.append(f"{'Total Propellant':<25} {propellant_mass:<12.3f}")
+        content.append(f"{'Total Mass':<25} {total_dry_mass + propellant_mass:<12.3f}")
+        content.append(f"{'Mass Ratio':<25} {(total_dry_mass + propellant_mass) / total_dry_mass if total_dry_mass > 0 else 0:<12.3f}")
+    else:
+        content.append("Using legacy config values:")
+        content.append(f"{'Dry Weight':<25} {config.dry_weight:<12.3f} kg")
+        content.append(f"{'Propellant Mass':<25} {config.propellant_mass:<12.3f} kg")
+    
+    content.append("")
+    
+    # Rocket Geometry
+    content.append("="*70)
+    content.append("ROCKET GEOMETRY")
+    content.append("="*70)
+    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', 2.5)} m")
+    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', 0.5)} m")
+    content.append(f"Rocket Radius:              {config.rocket_radius} m")
+    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', 0.3)} m")
+    content.append(f"Nose Cone Shape:            {getattr(config, 'nose_cone_shape', 'ogive')}")
+    content.append("")
+    
+    # Engine Parameters
+    content.append("="*70)
+    content.append("ENGINE PARAMETERS")
+    content.append("="*70)
+    content.append(f"ISP Sea Level:              {config.isp_sea} s")
+    content.append(f"ISP Vacuum:                 {config.isp_vac} s")
+    content.append(f"Fuel Flow Rate:             {config.fuel_flow_rate} kg/s")
+    content.append("")
+    
+    # Initial Conditions
+    content.append("="*70)
+    content.append("INITIAL CONDITIONS")
+    content.append("="*70)
+    content.append(f"Initial Velocity:           {config.v0} m/s")
+    content.append(f"Initial Altitude:           {config.h0} m")
+    content.append(f"Initial Dynamic Pressure:   {config.q0} Pa")
+    content.append("")
+    
+    # Aerodynamic Parameters
+    content.append("="*70)
+    content.append("AERODYNAMIC PARAMETERS")
+    content.append("="*70)
+    content.append(f"Drag Coefficient:           {config.drag_coefficient}")
+    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
+    content.append("")
+    
+    # Earth Constants
+    content.append("="*70)
+    content.append("EARTH CONSTANTS")
+    content.append("="*70)
+    content.append(f"Gravitational Constant:     {config.gravitational_constant}")
+    content.append(f"Earth Mass:                 {config.mass_earth} kg")
+    content.append(f"Earth Radius:               {config.earth_radius} m")
+    content.append("")
+    
+    # Fin Parameters (if available)
+    if material_name:
+        try:
+            fin = RocketFin()
+            fin.set_material(material_name)
+            fin.calculate_fin_dimensions(verbose=False)
+            
+            content.append("="*70)
+            content.append("FIN PARAMETERS")
+            content.append("="*70)
+            content.append(f"Material:                   {fin.material_name}")
+            content.append(f"Number of Fins:             {fin.num_fins}")
+            content.append(f"Fin Height:                 {fin.fin_height:.2f} mm")
+            content.append(f"Fin Width:                  {fin.fin_width:.2f} mm")
+            content.append(f"Fin Mass (single):          {fin.fin_mass:.6f} kg")
+            content.append(f"Total Fin Mass:             {fin.fin_mass * fin.num_fins:.6f} kg")
+            content.append(f"Wall Thickness:             {fin.wall_thickness} mm")
+            content.append(f"Fin Set CG Position:        {getattr(config, 'fin_set_cg_position', 2.1)} m")
+            content.append("")
+            
+            # Material Properties
+            content.append("="*70)
+            content.append("MATERIAL PROPERTIES")
+            content.append("="*70)
+            content.append(f"Thermal Conductivity:       {fin.thermal_conductivity} W/(m·K)")
+            content.append(f"Density:                    {fin.density} kg/m³")
+            content.append(f"Specific Heat:              {fin.specific_heat} J/(kg·K)")
+            content.append(f"Max Service Temperature:    {fin.max_service_temp} K")
+            content.append(f"Yield Strength:             {fin.yield_strength} MPa")
+            content.append(f"Thermal Expansion:          {fin.thermal_expansion} 1/K")
+            content.append(f"Emissivity:                 {fin.emissivity}")
+            
+        except Exception as e:
+            content.append("="*70)
+            content.append("FIN PARAMETERS")
+            content.append("="*70)
+            content.append(f"Error calculating fin parameters: {str(e)}")
+    
+    return "\n".join(content)
+
+def _create_material_comparison_conditions_content(fast_mode=False, component_manager=None, **kwargs):
+    """Create content for material comparison initial conditions"""
+    content = []
+    
+    # Get available materials
+    try:
+        fin = RocketFin()
+        materials = fin.get_available_materials()
+    except:
+        materials = ["Unable to load materials"]
+    
+    content.append("="*70)
+    content.append("MATERIAL COMPARISON PARAMETERS")
+    content.append("="*70)
+    content.append(f"Comparison Mode:            {'Fast' if fast_mode else 'Detailed'}")
+    content.append(f"Number of Materials:        {len(materials)}")
+    content.append(f"Mesh Size:                  {'Reduced' if fast_mode else 'Full'}")
+    content.append("")
+    
+    content.append("Materials Compared:")
+    content.append("-" * 30)
+    for i, material in enumerate(materials, 1):
+        content.append(f"{i:2d}. {material}")
+    content.append("")
+    
+    # Add common simulation parameters
+    content.append("="*70)
+    content.append("COMMON SIMULATION PARAMETERS")
+    content.append("="*70)
+    content.append(f"Time Step (dt):             {config.dt} s")
+    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
+    content.append(f"Drag Coefficient:           {config.drag_coefficient}")
+    content.append(f"ISP Sea Level:              {config.isp_sea} s")
+    content.append(f"ISP Vacuum:                 {config.isp_vac} s")
+    content.append(f"Fuel Flow Rate:             {config.fuel_flow_rate} kg/s")
+    content.append("")
+    
+    # Component masses (same as flight simulation)
+    if component_manager and component_manager.get_component_data():
+        components = component_manager.get_component_data()
+        content.append("="*70)
+        content.append("COMPONENT MASSES (USED FOR ALL MATERIALS)")
+        content.append("="*70)
+        content.append(f"{'Component':<25} {'Mass (kg)':<12} {'Position (m)':<15}")
+        content.append("-"*60)
+        
+        for name, data in components.items():
+            mass = data.get('mass', 0)
+            position = data.get('position', 0)
+            content.append(f"{name:<25} {mass:<12.3f} {position:<15.3f}")
+    
+    return "\n".join(content)
+
+def _create_stability_conditions_content(flight_stage=None, component_manager=None, **kwargs):
+    """Create content for stability analysis initial conditions"""
+    content = []
+    
+    content.append("="*70)
+    content.append("STABILITY ANALYSIS PARAMETERS")
+    content.append("="*70)
+    content.append(f"Flight Stage Analyzed:      {flight_stage if flight_stage else 'All Stages'}")
+    content.append(f"Min Caliber Stability:      {getattr(config, 'min_caliber_stability', 1.5)}")
+    content.append(f"Max Caliber Stability:      {getattr(config, 'max_caliber_stability', 4.0)}")
+    content.append(f"Show Component CGs:         {getattr(config, 'show_component_cgs', True)}")
+    content.append(f"Show Stability Margin:      {getattr(config, 'show_stability_margin', True)}")
+    content.append("")
+    
+    # Rocket Configuration
+    content.append("="*70)
+    content.append("ROCKET CONFIGURATION")
+    content.append("="*70)
+    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', 2.5)} m")
+    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', 0.5)} m")
+    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', 0.3)} m")
+    content.append(f"Nose Cone Shape:            {getattr(config, 'nose_cone_shape', 'ogive')}")
+    content.append("")
+    
+    # Component masses and CG positions
+    if component_manager and component_manager.get_component_data():
+        components = component_manager.get_component_data()
+        content.append("="*70)
+        content.append("COMPONENT MASSES AND CG POSITIONS")
+        content.append("="*70)
+        content.append(f"{'Component':<25} {'Mass (kg)':<12} {'CG Position (m)':<18}")
+        content.append("-"*60)
+        
+        for name, data in components.items():
+            mass = data.get('mass', 0)
+            position = data.get('position', 0)
+            content.append(f"{name:<25} {mass:<12.3f} {position:<18.3f}")
+    
+    content.append("")
+    
+    # Flight conditions for different stages
+    if flight_stage and flight_stage != "all":
+        content.append("="*70)
+        content.append(f"FLIGHT CONDITIONS FOR {flight_stage.upper()} STAGE")
+        content.append("="*70)
+        
+        if flight_stage.lower() == "launch":
+            content.append("Mach Number:                0.1")
+            content.append("Propellant Load:            100%")
+        elif flight_stage.lower() == "burnout":
+            content.append("Mach Number:                2.0")
+            content.append("Propellant Load:            0%")
+        elif flight_stage.lower() == "apogee":
+            content.append("Mach Number:                0.5")
+            content.append("Propellant Load:            0%")
+        elif flight_stage.lower() == "landing":
+            content.append("Mach Number:                0.2")
+            content.append("Propellant Load:            0%")
+    
+    return "\n".join(content)
+
+def _create_trajectory_conditions_content(target_altitude=100000, component_manager=None, **kwargs):
+    """Create content for trajectory optimization initial conditions"""
+    content = []
+    
+    content.append("="*70)
+    content.append("TRAJECTORY OPTIMIZATION PARAMETERS")
+    content.append("="*70)
+    content.append(f"Target Altitude:            {target_altitude/1000:.0f} km ({target_altitude} m)")
+    content.append(f"Analysis Type:              Trajectory optimization")
+    content.append("")
+    
+    # Optimization categories
+    content.append("="*70)
+    content.append("OPTIMIZATION ANALYSIS CATEGORIES")
+    content.append("="*70)
+    content.append("1. Mass Reduction Analysis")
+    content.append("2. Aerodynamic Improvements")
+    content.append("3. Propellant Optimization")
+    content.append("4. Staging Considerations")
+    content.append("5. Trajectory Shape Optimization")
+    content.append("")
+    
+    # Simulation parameters used for baseline
+    content.append("="*70)
+    content.append("BASELINE SIMULATION PARAMETERS")
+    content.append("="*70)
+    content.append(f"Material Used:              {getattr(config, 'fin_material', 'Titanium Ti-6Al-4V')}")
+    content.append(f"Fast Mode:                  True")
+    content.append(f"Time Step (dt):             {config.dt} s")
+    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
+    content.append("")
+    
+    # Component configuration
+    if component_manager and component_manager.get_component_data():
+        components = component_manager.get_component_data()
+        content.append("="*70)
+        content.append("CURRENT ROCKET CONFIGURATION")
+        content.append("="*70)
+        
+        total_mass = sum(comp['mass'] for comp in components.values())
+        dry_mass = sum(comp['mass'] for name, comp in components.items() 
+                      if 'propellant' not in name.lower())
+        propellant_mass = total_mass - dry_mass
+        
+        content.append(f"Total Mass:                 {total_mass:.3f} kg")
+        content.append(f"Dry Mass:                   {dry_mass:.3f} kg")
+        content.append(f"Propellant Mass:            {propellant_mass:.3f} kg")
+        content.append(f"Mass Ratio:                 {total_mass/dry_mass if dry_mass > 0 else 0:.3f}")
+        content.append("")
+        
+        content.append("Component Breakdown:")
+        content.append("-" * 30)
+        for name, data in sorted(components.items(), key=lambda x: x[1]['mass'], reverse=True):
+            percentage = (data['mass'] / total_mass) * 100
+            content.append(f"{name:<20} {data['mass']:>8.3f} kg ({percentage:>5.1f}%)")
+    
+    return "\n".join(content)
+
+def create_flight_simulation_pdf(output_path, material_name, component_manager=None, fast_mode=False):
+    """Create comprehensive PDF for flight simulation results"""
+    
+    with PdfPages(output_path) as pdf:
+        # Get flight data
+        times = np.array(flight_simulator.time_points)
+        speeds = np.array([i.speed for i in flight_simulator.r])
+        altitudes = np.array([i.altitude for i in flight_simulator.r])
+        dynamic_pressures = np.array([i.dynamic_pressure for i in flight_simulator.r])
+        nose_cone_temps = np.array([i.nose_cone_temp for i in flight_simulator.r])
+        
+        # Page 1: Flight Data (Speed vs Time, Altitude vs Time)
+        fig1 = plt.figure(figsize=(12, 8))
+        
+        # Speed vs Time
+        ax1 = plt.subplot(2, 1, 1)
+        ax1.plot(times, speeds, 'b-', linewidth=1.5)
+        ax1.set_title("Speed vs Time")
+        ax1.set_xlabel("Time (s)")
+        ax1.set_ylabel("Speed (m/s)")
+        ax1.grid(True, linestyle='--', alpha=0.7)
+        
+        # Altitude vs Time
+        ax2 = plt.subplot(2, 1, 2)
+        ax2.plot(times, altitudes, 'g-', linewidth=1.5)
+        ax2.set_title("Altitude vs Time")
+        ax2.set_xlabel("Time (s)")
+        ax2.set_ylabel("Altitude (m)")
+        ax2.grid(True, linestyle='--', alpha=0.7)
+        
+        plt.tight_layout()
+        pdf.savefig(fig1)
+        plt.close(fig1)
+        
+        # Page 2: Fin Temperature History
+        if flight_simulator.fin_tracker:
+            fig2 = flight_simulator.fin_tracker.plot_temperature_history()
+            pdf.savefig(fig2)
+            plt.close(fig2)
+            
+            # Page 3: Max Temperature Location Info
+            fig3 = plt.figure(figsize=(12, 8))
+            
+            # Plot altitude, velocity, mach vs time with max temp point marked
+            ax1 = plt.subplot(2, 2, 1)
+            ax1.plot(flight_simulator.fin_tracker.time_points, flight_simulator.fin_tracker.altitude_history, 'g-', label='Altitude (m)')
+            if hasattr(flight_simulator.fin_tracker, 'absolute_max_temperature_info') and flight_simulator.fin_tracker.absolute_max_temperature_info:
+                max_info = flight_simulator.fin_tracker.absolute_max_temperature_info
+                ax1.plot(max_info["time"], max_info["altitude"], 'ro', markersize=8, label='Max Temp Point')
+            ax1.set_xlabel('Time (s)')
+            ax1.set_ylabel('Altitude (m)')
+            ax1.set_title('Altitude vs Time')
+            ax1.legend()
+            ax1.grid(True)
+            
+            ax2 = plt.subplot(2, 2, 2)
+            ax2.plot(flight_simulator.fin_tracker.time_points, flight_simulator.fin_tracker.velocity_history, 'b-', label='Velocity (m/s)')
+            if hasattr(flight_simulator.fin_tracker, 'absolute_max_temperature_info') and flight_simulator.fin_tracker.absolute_max_temperature_info:
+                ax2.plot(max_info["time"], max_info["velocity"], 'ro', markersize=8, label='Max Temp Point')
+            ax2.set_xlabel('Time (s)')
+            ax2.set_ylabel('Velocity (m/s)')
+            ax2.set_title('Velocity vs Time')
+            ax2.legend()
+            ax2.grid(True)
+            
+            ax3 = plt.subplot(2, 2, 3)
+            ax3.plot(flight_simulator.fin_tracker.time_points, flight_simulator.fin_tracker.mach_history, 'm-', label='Mach Number')
+            if hasattr(flight_simulator.fin_tracker, 'absolute_max_temperature_info') and flight_simulator.fin_tracker.absolute_max_temperature_info:
+                ax3.plot(max_info["time"], max_info["mach"], 'ro', markersize=8, label='Max Temp Point')
+            ax3.set_xlabel('Time (s)')
+            ax3.set_ylabel('Mach Number')
+            ax3.set_title('Mach Number vs Time')
+            ax3.legend()
+            ax3.grid(True)
+            
+            ax4 = plt.subplot(2, 2, 4)
+            ax4.plot(flight_simulator.fin_tracker.time_points, flight_simulator.fin_tracker.max_temp_history, 'r-', label='Max Temperature')
+            if hasattr(flight_simulator.fin_tracker, 'absolute_max_temperature_info') and flight_simulator.fin_tracker.absolute_max_temperature_info:
+                ax4.plot(max_info["time"], max_info["temperature"], 'ro', markersize=8, label='Max Temp Point')
+                ax4.text(0.05, 0.95, f'Max Temp: {max_info["temperature"]:.1f}K\nTime: {max_info["time"]:.1f}s\nMach: {max_info["mach"]:.2f}', 
+                        transform=ax4.transAxes, verticalalignment='top',
+                        bbox=dict(facecolor='white', alpha=0.7))
+            ax4.set_xlabel('Time (s)')
+            ax4.set_ylabel('Temperature (K)')
+            ax4.set_title('Maximum Temperature vs Time')
+            ax4.legend()
+            ax4.grid(True)
+            
+            plt.tight_layout()
+            pdf.savefig(fig3)
+            plt.close(fig3)
+            
+            # Page 4: Temperature Distribution at Maximum Temperature
+            critical_points = flight_simulator.fin_tracker.get_critical_time_points()
+            if "max_temperature" in critical_points:
+                max_temp_time = critical_points["max_temperature"]["time"]
+                max_temp_mach = critical_points["max_temperature"]["mach"]
+                max_temp_idx = flight_simulator.fin_tracker.time_points.index(max_temp_time)
+                
+                fig4 = flight_simulator.fin_tracker.plot_temperature_snapshot(max_temp_idx, max_temp_time, max_temp_mach)
+                fig4.suptitle("Temperature Distribution at Maximum Temperature", fontsize=16)
+                pdf.savefig(fig4)
+                plt.close(fig4)
+            
+            # Page 5: Temperature Distribution at Maximum Velocity
+            if "max_velocity" in critical_points:
+                max_vel_time = critical_points["max_velocity"]["time"]
+                max_vel_mach = critical_points["max_velocity"]["mach"]
+                max_vel_idx = flight_simulator.fin_tracker.time_points.index(max_vel_time)
+                
+                fig5 = flight_simulator.fin_tracker.plot_temperature_snapshot(max_vel_idx, max_vel_time, max_vel_mach)
+                fig5.suptitle("Temperature Distribution at Maximum Velocity", fontsize=16)
+                pdf.savefig(fig5)
+                plt.close(fig5)
+        
+        # LAST PAGES: Initial Conditions (can be multiple pages)
+        fig_conditions_list = create_initial_conditions_page(
+            "flight", 
+            material_name=material_name, 
+            component_manager=component_manager,
+            fast_mode=fast_mode
+        )
+        for fig_conditions in fig_conditions_list:
+            pdf.savefig(fig_conditions)
+            plt.close(fig_conditions)
+
+def create_material_comparison_pdf(output_path, results, fast_mode=False, component_manager=None):
+    """Create comprehensive PDF for material comparison results"""
+    
+    with PdfPages(output_path) as pdf:
+        # Page 1: Temperature Comparison
+        fig1, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 12))
+        
+        # Sort materials by temperature margin for consistent plotting
+        results_margin = sorted(results, key=lambda x: x["Temperature Margin (K)"], reverse=True)
+        
+        # Extract data for plotting
+        materials = [r["Material"] for r in results_margin]
+        max_temps = np.array([r["Max Temperature (K)"] for r in results_margin])
+        max_service_temps = np.array([r["Max Service Temp (K)"] for r in results_margin])
+        margins = np.array([r["Temperature Margin (K)"] for r in results_margin])
+        
+        # Plot 1: Temperature comparison
+        positions = np.arange(len(materials))
+        bar_width = 0.35
+        
+        temp_bars = ax1.bar(positions - bar_width/2, max_temps, bar_width, 
+                           label="Max Temperature (K)", color='red', alpha=0.7)
+        limit_bars = ax1.bar(positions + bar_width/2, max_service_temps, bar_width, 
+                            label="Max Service Temperature (K)", color='blue', alpha=0.6)
+        
+        # Add temperature margin annotations
+        for i, (margin, pos) in enumerate(zip(margins, positions)):
+            color = 'green' if margin >= 0 else 'red'
+            annotation = f"+{margin:.1f}K" if margin >= 0 else f"{margin:.1f}K"
+            
+            y_pos = max(max_temps[i], max_service_temps[i]) + 20
+            ax1.annotate(annotation, xy=(pos, y_pos), ha='center', va='bottom',
+                         color=color, weight='bold', fontsize=8)
+        
+        ax1.set_xlabel("Material")
+        ax1.set_ylabel("Temperature (K)")
+        ax1.set_title("Temperature Comparison by Material")
+        ax1.set_xticks(positions)
+        ax1.set_xticklabels(materials, rotation=45, ha='right')
+        ax1.legend()
+        ax1.grid(True, linestyle='--', alpha=0.7)
+        
+        # Plot 2: Mass comparison with temperature safety rating
+        results_mass = sorted(results, key=lambda x: x["Mass (kg)"])
+        materials_by_mass = [r["Material"] for r in results_mass]
+        masses_sorted = np.array([r["Mass (kg)"] for r in results_mass])
+        within_limits = [r["Within Limits"] for r in results_mass]
+        temp_margins_mass = np.array([r["Temperature Margin (K)"] for r in results_mass])
+        
+        positions2 = np.arange(len(materials_by_mass))
+        mass_bars = ax2.bar(positions2, masses_sorted, label="Total Fins Mass (kg)")
+        
+        # Color code bars based on temperature margin
+        colors = []
+        for margin, limit_ok in zip(temp_margins_mass, within_limits):
+            if not limit_ok:
+                colors.append('red')
+            elif margin < 50:
+                colors.append('orange')
+            elif margin < 150:
+                colors.append('yellow')
+            else:
+                colors.append('green')
+        
+        # Apply colors
+        for bar, color, limit_ok in zip(mass_bars, colors, within_limits):
+            bar.set_color(color)
+            if not limit_ok:
+                bar.set_hatch('///')
+        
+        # Add mass annotations
+        for i, mass in enumerate(masses_sorted):
+            ax2.annotate(f"{mass:.4f}kg", xy=(i, mass + 0.01),
+                       ha='center', va='bottom', fontsize=8)
+        
+        ax2.set_xlabel("Material")
+        ax2.set_ylabel("Mass (kg)")
+        ax2.set_title("Mass Comparison by Material (With Temperature Safety Rating)")
+        ax2.set_xticks(positions2)
+        ax2.set_xticklabels(materials_by_mass, rotation=45, ha='right')
+        ax2.grid(True, linestyle='--', alpha=0.7)
+        
+        # Add color coding legend
+        import matplotlib.patches as mpatches
+        legend_elements = [
+            mpatches.Patch(color='red', hatch='///', label='Exceeds Temperature Limit'),
+            mpatches.Patch(color='orange', label='Margin < 50K'),
+            mpatches.Patch(color='yellow', label='Margin < 150K'),
+            mpatches.Patch(color='green', label='Margin ≥ 150K')
+        ]
+        ax2.legend(handles=legend_elements, loc='upper right')
+        
+        plt.tight_layout()
+        pdf.savefig(fig1)
+        plt.close(fig1)
+        
+        # Page 2: Material Properties Relationship
+        fig2, ax3 = plt.subplots(figsize=(10, 8))
+        
+        # Extract properties
+        thermal_conductivities = np.array([r["Thermal Conductivity (W/m·K)"] for r in results])
+        densities = np.array([r["Density (kg/m³)"] for r in results])
+        emissivities = np.array([r["Emissivity"] for r in results])
+        materials_orig = [r["Material"] for r in results]
+        margins_orig = np.array([r["Temperature Margin (K)"] for r in results])
+        
+        # Define colors based on temperature margin
+        colors = np.where(margins_orig < 0, 'red',
+                         np.where(margins_orig < 50, 'orange',
+                                 np.where(margins_orig < 150, 'yellow', 'green')))
+        
+        # Create scatter plot
+        scatter = ax3.scatter(thermal_conductivities, densities, 
+                            s=emissivities*500,  # Size based on emissivity
+                            c=colors, alpha=0.7)
+        
+        # Add material labels
+        for i, material in enumerate(materials_orig):
+            short_name = material.split()[0]  # First word only
+            ax3.annotate(short_name, 
+                       xy=(thermal_conductivities[i], densities[i]),
+                       xytext=(5, 0), textcoords='offset points',
+                       fontsize=8)
+        
+        ax3.set_xlabel("Thermal Conductivity (W/m·K)")
+        ax3.set_ylabel("Density (kg/m³)")
+        ax3.set_title("Material Properties Relationship (With Temperature Safety Rating)")
+        
+        # Add legends
+        from matplotlib.lines import Line2D
+        legend_elements = [
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', 
+                  label=f'Low Emissivity: {min(emissivities):.2f}', markersize=8),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', 
+                  label=f'High Emissivity: {max(emissivities):.2f}', markersize=16),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='red', 
+                  label='Exceeds Limit', markersize=10),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='orange', 
+                  label='Margin < 50K', markersize=10),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='yellow', 
+                  label='Margin < 150K', markersize=10),
+            Line2D([0], [0], marker='o', color='w', markerfacecolor='green', 
+                  label='Margin ≥ 150K', markersize=10)
+        ]
+        
+        ax3.legend(handles=legend_elements, loc='best')
+        ax3.grid(True, linestyle='--', alpha=0.7)
+        
+        pdf.savefig(fig2)
+        plt.close(fig2)
+        
+        # Page 3: Fin Dimensions Overlay
+        fig3, (ax4, ax5) = plt.subplots(1, 2, figsize=(14, 8))
+        
+        # Extract dimensions
+        heights = [r["Height (mm)"] for r in results]
+        widths = [r["Width (mm)"] for r in results]
+        materials_list = [r["Material"] for r in results]
+        
+        # Plot 1: Height comparison
+        x_pos = np.arange(len(materials_list))
+        bars1 = ax4.bar(x_pos, heights, color='skyblue', alpha=0.7)
+        ax4.set_xlabel("Material")
+        ax4.set_ylabel("Height (mm)")
+        ax4.set_title("Fin Height by Material")
+        ax4.set_xticks(x_pos)
+        ax4.set_xticklabels([m.split()[0] for m in materials_list], rotation=45, ha='right')
+        ax4.grid(True, linestyle='--', alpha=0.7)
+        
+        # Add value labels on bars
+        for bar, height in zip(bars1, heights):
+            ax4.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                    f'{height:.1f}', ha='center', va='bottom', fontsize=8)
+        
+        # Plot 2: Width comparison
+        bars2 = ax5.bar(x_pos, widths, color='lightcoral', alpha=0.7)
+        ax5.set_xlabel("Material")
+        ax5.set_ylabel("Width (mm)")
+        ax5.set_title("Fin Width by Material")
+        ax5.set_xticks(x_pos)
+        ax5.set_xticklabels([m.split()[0] for m in materials_list], rotation=45, ha='right')
+        ax5.grid(True, linestyle='--', alpha=0.7)
+        
+        # Add value labels on bars
+        for bar, width in zip(bars2, widths):
+            ax5.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
+                    f'{width:.1f}', ha='center', va='bottom', fontsize=8)
+        
+        plt.tight_layout()
+        pdf.savefig(fig3)
+        plt.close(fig3)
+        
+        # LAST PAGES: Initial Conditions (can be multiple pages)
+        fig_conditions_list = create_initial_conditions_page(
+            "material_comparison", 
+            fast_mode=fast_mode,
+            component_manager=component_manager
+        )
+        for fig_conditions in fig_conditions_list:
+            pdf.savefig(fig_conditions)
+            plt.close(fig_conditions)
+
+def run_single_material_analysis(material_name=None, fast_mode=True, show_plots=None):
+    """
+    Run the flight simulation and fin thermal analysis for a single material (optimized)
+    
+    Args:
+        material_name: Name of the material to use (use default if None)
+        fast_mode: Use optimized settings for faster execution
+        show_plots: Override config setting for plot display (None uses config default)
+    """
+    analysis_start = time.time()
+    
+    # Determine plot display setting
+    display_plots = config.show_plots if show_plots is None else show_plots
+    
+    # Load team data first - ensures consistent masses across all components
+    component_manager = load_team_data()
+    
+    if material_name is None:
+        material_name = config.fin_material
+    
+    print(f"\nRunning flight simulation with fin material: {material_name}")
+    if not display_plots:
+        print("(Plot display disabled - results will be saved to PDF only)")
+    
+    # Print summary of component masses that will be used
+    component_manager.print_component_summary()
+    
+    # Calculate max_q for the simulation based on team data
+    print("\nSetting dynamic pressure parameters for fin calculations...")
+    
+    # Initialize rocket fin with specified material
+    fin_start = time.time()
+    fin = RocketFin()
+    
+    # Force max_q to a consistent value regardless of whether this is the first run
+    # or a subsequent run. This ensures consistency between direct runs and runs from run_analysis.py
+    max_q = 82800.0  # Fixed value to match the default in rocket_fin_dimensions.py
+    
+    # Override config.max_q to ensure consistency
+    config.max_q = max_q
+    
+    print(f"Setting dynamic pressure (max_q) for fin calculations: {max_q} Pa")
+    
+    # Make sure the fin's max_q is set correctly
+    fin.max_q = max_q
+    
+    if not fin.set_material(material_name):
+        print(f"Error: Material '{material_name}' not found. Using default material.")
+        fin.set_material(config.fin_material)
+        material_name = config.fin_material
+    
+    # Calculate fin dimensions
+    fin.calculate_fin_dimensions(verbose=True)
+    fin_time = time.time() - fin_start
+    print(f"Fin initialization completed in {fin_time:.3f} seconds")
+
+    tracker = FinTemperatureTracker(fin)
+    flight_simulator.fin_tracker = tracker
+    flight_simulator.component_manager = component_manager
+    
+    sim_start = time.time()
+    flight_simulator.main(skip_plots=(not display_plots), material_name=material_name, fast_mode=fast_mode, skip_animation=True)
+    sim_time = time.time() - sim_start
+    
+    # Create PDF output
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Generate PDF filename
+    material_abbrev = material_name.replace(' ', '_').replace('-', '_')
+    pdf_filename = f"FS_{material_abbrev}.pdf"
+    pdf_path = os.path.join(output_dir, pdf_filename)
+    
+    print(f"\nGenerating comprehensive PDF report: {pdf_filename}")
+    pdf_start = time.time()
+    create_flight_simulation_pdf(pdf_path, material_name, component_manager, fast_mode)
+    pdf_time = time.time() - pdf_start
+    print(f"PDF report generated in {pdf_time:.3f} seconds")
+    
+    # Create animation if configured and not in fast mode
+    if not fast_mode and config.create_temperature_animation:
+        anim_start = time.time()
+        
+        # Ensure the output file isn't already in use
+        output_path = os.path.join(output_dir, f"fin_temp_{material_name.replace(' ', '_')}.mp4")
+        
+        # Remove existing files to prevent permission issues
+        if os.path.exists(output_path):
+            try:
+                os.remove(output_path)
+                print(f"Removed existing animation file: {output_path}")
+            except Exception as e:
+                print(f"Warning: Could not remove existing file: {e}")
+                # Try a different filename to avoid conflicts
+                output_path = os.path.join(output_dir, f"fin_temp_{material_name.replace(' ', '_')}_{int(time.time())}.mp4")
+        
+        # Create animation after the simulation has completed
+        animation_tracker = flight_simulator.fin_tracker  # Use the tracker that has all the flight data
+        if animation_tracker and len(animation_tracker.time_points) > 0:
+            print(f"\nCreating temperature animation for {material_name} fins...")
+            
+            # Get the correct maximum temperature
+            if hasattr(animation_tracker, 'absolute_max_temperature') and animation_tracker.absolute_max_temperature is not None:
+                max_temp = animation_tracker.absolute_max_temperature
+            else:
+                # Fallback to the maximum from history
+                max_temp = max(animation_tracker.max_temp_history) if hasattr(animation_tracker, 'max_temp_history') else 0
+                
+            # Report max temperature compared to maximum service temperature
+            if max_temp > animation_tracker.fin.max_service_temp:
+                print(f"WARNING: Maximum temperature ({max_temp:.2f}K) exceeds material service limit ({animation_tracker.fin.max_service_temp}K)")
+                print(f"Temperature margin: {(animation_tracker.fin.max_service_temp - max_temp):.2f}K (negative indicates excess)")
+                
+                # Find when the max temperature occurs
+                if hasattr(animation_tracker, 'absolute_max_temperature_info'):
+                    max_time = animation_tracker.absolute_max_temperature_info["time"]
+                    max_altitude = animation_tracker.absolute_max_temperature_info["altitude"]
+                    max_velocity = animation_tracker.absolute_max_temperature_info["velocity"]
+                    max_mach = animation_tracker.absolute_max_temperature_info["mach"]
+                    
+                    print(f"Maximum temperature occurs at:")
+                    print(f"  - Time: {max_time:.2f}s")
+                    print(f"  - Altitude: {max_altitude:.2f}m")
+                    print(f"  - Velocity: {max_velocity:.2f}m/s")
+                    print(f"  - Mach: {max_mach:.2f}")
+            else:
+                print(f"Material temperature is within limits. Maximum: {max_temp:.2f}K, Service limit: {animation_tracker.fin.max_service_temp}K")
+            
+            try:
+                create_fin_temperature_animation(animation_tracker, output_path)
+            except Exception as e:
+                print(f"Error creating animation: {e}")
+        
+        anim_time = time.time() - anim_start
+        print(f"Animation creation completed in {anim_time:.3f} seconds")
+    
+    # Clear caches to free memory
+    flight_simulator.clear_simulation_caches()
+    
+    total_time = time.time() - analysis_start
+    print(f"Complete analysis finished in {total_time:.3f} seconds (simulation: {sim_time:.3f}s)")
+
+def run_material_comparison(fast_mode=True, show_plots=None):
+    """
+    Run a comparison of all available materials (optimized)
+    
+    Args:
+        fast_mode: Use optimized settings for faster execution
+        show_plots: Override config setting for plot display (None uses config default)
+    """
+    comparison_start = time.time()
+    
+    # Determine plot display setting
+    display_plots = config.show_plots if show_plots is None else show_plots
+    
+    # Load team data first - ensures consistent masses across all components
+    component_manager = load_team_data()
+    flight_simulator.component_manager = component_manager
+    
+    print("\nRunning material comparison for all available materials...")
+    if not display_plots:
+        print("(Plot display disabled - results will be saved to PDF only)")
+    results = material_comparison.compare_fin_materials_for_flight(fast_mode=fast_mode)
+    
+    # Sort results for display
+    results.sort(key=lambda x: (not x["Within Limits"], x["Mass (kg)"]))
+    
+    # Print results table
+    print("\nMaterial Comparison Results (with improved accuracy):")
+    print(f"{'Material':<33} {'Max Temp (K)':<12} {'Temp Margin (K)':<15} {'Mass (kg)':<10} {'Within Limits':<15}")
+    print("-" * 85)
+    
+    for result in results:
+        print(f"{result['Material']:<33} {result['Max Temperature (K)']:<12.3f} {result['Temperature Margin (K)']:<15.1f} {result['Mass (kg)']:<10.5f} {result['Within Limits']}")
+    
+    # Create PDF output
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Generate PDF filename
+    mode_suffix = "fast" if fast_mode else "detailed"
+    pdf_filename = f"MC_{mode_suffix}.pdf"
+    pdf_path = os.path.join(output_dir, pdf_filename)
+    
+    print(f"\nGenerating material comparison PDF report: {pdf_filename}")
+    pdf_start = time.time()
+    create_material_comparison_pdf(pdf_path, results, fast_mode, component_manager)
+    pdf_time = time.time() - pdf_start
+    print(f"PDF report generated in {pdf_time:.3f} seconds")
+    
+    # Find the best material
+    best_material = next((r["Material"] for r in results if r["Within Limits"]), None)
+    if best_material:
+        print(f"\nRecommended material: {best_material}")
+        
+        # Ask if user wants to run detailed analysis for the best material
+        if not fast_mode:
+            user_input = input("\nRun detailed analysis for the recommended material? (y/n): ")
+            if user_input.lower() == 'y':
+                run_single_material_analysis(best_material, fast_mode=False, show_plots=display_plots)
+    else:
+        print("\nWarning: No material can withstand the thermal conditions of this flight profile.")
+        
+        # Find material with smallest temperature exceedance
+        results.sort(key=lambda x: -x["Temperature Margin (K)"])
+        least_bad_material = results[0]["Material"]
+        print(f"Least problematic material: {least_bad_material}")
+        
+        # Ask if user wants to run detailed analysis
+        if not fast_mode:
+            user_input = input("\nRun detailed analysis for this material? (y/n): ")
+            if user_input.lower() == 'y':
+                run_single_material_analysis(least_bad_material, fast_mode=False, show_plots=display_plots)
+    
+    # Clear caches
+    flight_simulator.clear_simulation_caches()
+    
+    comparison_time = time.time() - comparison_start
+    print(f"Material comparison completed in {comparison_time:.3f} seconds")
+
+def run_stability_analysis(flight_stage=None, show_plots=None):
+    """
+    Run stability analysis at different flight stages (optimized)
+    
+    Args:
+        flight_stage: Specific flight stage to analyze (launch, burnout, apogee, etc.)
+                     If None, analyze all stages
+        show_plots: Override config setting for plot display (None uses config default)
+    """
+    stability_start = time.time()
+    
+    # Determine plot display setting
+    display_plots = config.show_plots if show_plots is None else show_plots
+    
+    # Load team data first
+    component_manager = load_team_data()
+    
+    # Initialize rocket fin
+    fin_init_start = time.time()
+    fin = RocketFin()
+    fin.calculate_fin_dimensions(verbose=False)
+    fin_init_time = time.time() - fin_init_start
+    
+    # Create stability analyzer
+    stability = RocketStability()
+    stability.set_fin_properties(fin)
+    
+    # Print current component data summary
+    component_manager.print_component_summary()
+    
+    if not display_plots:
+        print("(Plot display disabled - results will be saved to PDF only)")
+    
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    if flight_stage is None or flight_stage == "all":
+        # If no specific stage, run full simulation to get flight data
+        print("\nRunning full flight simulation to get trajectory data...")
+        sim_start = time.time()
+        tracker = FinTemperatureTracker(fin)
+        flight_simulator.fin_tracker = tracker
+        flight_simulator.component_manager = component_manager  # Pass the component manager to main
+        flight_simulator.main(skip_plots=True, material_name=config.fin_material, fast_mode=True, skip_animation=True)
+        sim_time = time.time() - sim_start
+        print(f"Flight simulation completed in {sim_time:.3f} seconds")
+        
+        # Now generate the stability plots throughout flight
+        print("\nGenerating stability diagrams throughout flight...")
+        plot_start = time.time()
+        fig = flight_simulator.plot_stability_during_flight()
+        plot_time = time.time() - plot_start
+        
+        # Save as PDF with initial conditions
+        pdf_filename = "SA_all_stages.pdf"
+        pdf_path = os.path.join(output_dir, pdf_filename)
+        
+        print(f"Generating stability analysis PDF: {pdf_filename}")
+        pdf_start = time.time()
+        with PdfPages(pdf_path) as pdf:
+            pdf.savefig(fig)
+            # Add initial conditions pages (can be multiple)
+            fig_conditions_list = create_initial_conditions_page(
+                "stability", 
+                flight_stage="all",
+                component_manager=component_manager
+            )
+            for fig_conditions in fig_conditions_list:
+                pdf.savefig(fig_conditions)
+                plt.close(fig_conditions)
+        pdf_time = time.time() - pdf_start
+        plt.close(fig)
+        
+        print(f"PDF report generated in {pdf_time:.3f} seconds")
+        print(f"Plotting completed in {plot_time:.3f} seconds")
+    else:
+        # Analyze specific flight stage
+        print(f"\nAnalyzing stability at flight stage: {flight_stage}")
+        
+        # Get propellant mass from component data
+        propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config.propellant_mass)
+        
+        if flight_stage.lower() == "launch":
+            # Launch conditions
+            stability.set_flight_conditions(mach=0.1)
+            stability.set_propellant_mass(propellant_mass)  # Full propellant
+        elif flight_stage.lower() == "burnout":
+            # Burnout conditions - estimate Mach number
+            stability.set_flight_conditions(mach=2.0)
+            stability.set_propellant_mass(0)  # Empty propellant
+        elif flight_stage.lower() == "apogee":
+            # Apogee conditions
+            stability.set_flight_conditions(mach=0.5)
+            stability.set_propellant_mass(0)  # Empty propellant
+        elif flight_stage.lower() == "landing":
+            # Landing conditions
+            stability.set_flight_conditions(mach=0.2)
+            stability.set_propellant_mass(0)  # Empty propellant
+        else:
+            print(f"Unknown flight stage: {flight_stage}")
+            print("Available stages: launch, burnout, apogee, landing")
+            return
+        
+        # Calculate stability
+        calc_start = time.time()
+        stability.calculate_center_of_mass()
+        stability.calculate_center_of_pressure()
+        stability.calculate_stability()
+        calc_time = time.time() - calc_start
+        
+        # Print stability results
+        print("\nStability Analysis Results:")
+        print(f"Center of Mass position: {stability.center_of_mass:.3f} m from nose tip")
+        print(f"Center of Pressure position: {stability.center_of_pressure:.3f} m from nose tip")
+        print(f"Stability margin: {stability.stability_margin:.3f} m")
+        print(f"Stability in calibers: {stability.stability_calibers:.2f}")
+        print(f"Stability status: {stability.get_stability_status()}")
+        print(f"Calculation completed in {calc_time:.4f} seconds")
+        
+        # Plot stability diagram
+        plot_start = time.time()
+        fig, ax = stability.plot_stability_diagram(show_components=True)
+        plot_time = time.time() - plot_start
+        
+        # Save as PDF with initial conditions
+        pdf_filename = f"SA_{flight_stage}.pdf"
+        pdf_path = os.path.join(output_dir, pdf_filename)
+        
+        print(f"Generating stability analysis PDF: {pdf_filename}")
+        pdf_start = time.time()
+        with PdfPages(pdf_path) as pdf:
+            pdf.savefig(fig)
+            # Add initial conditions pages (can be multiple)
+            fig_conditions_list = create_initial_conditions_page(
+                "stability", 
+                flight_stage=flight_stage,
+                component_manager=component_manager
+            )
+            for fig_conditions in fig_conditions_list:
+                pdf.savefig(fig_conditions)
+                plt.close(fig_conditions)
+        pdf_time = time.time() - pdf_start
+        plt.close(fig)
+        
+        print(f"PDF report generated in {pdf_time:.3f} seconds")
+        print(f"Plotting completed in {plot_time:.3f} seconds")
+        
+        if display_plots:
+            plt.show()
+    
+    # Clear caches
+    flight_simulator.clear_simulation_caches()
+    
+    stability_time = time.time() - stability_start
+    print(f"Stability analysis completed in {stability_time:.3f} seconds")
+
+def manage_team_data():
+    """
+    Manage component data from different teams (optimized)
+    """
+    management_start = time.time()
+    component_manager = ComponentData()
+    
+    print("\nComponent Data Management:")
+    print("1. Create template files for teams")
+    print("2. Load team data from files")
+    print("3. Show component summary")
+    print("4. Exit")
+    
+    choice = input("\nEnter choice (1-4): ")
+    
+    if choice == '1':
+        template_start = time.time()
+        component_manager.create_all_templates()
+        template_time = time.time() - template_start
+        print(f"\nTemplate files created in {template_time:.3f} seconds")
+        print("Distribute these files to the respective teams to fill in their component data")
+    elif choice == '2':
+        load_start = time.time()
+        component_manager.update_from_team_files()
+        component_manager.update_config()
+        load_time = time.time() - load_start
+        print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
+    elif choice == '3':
+        summary_start = time.time()
+        component_manager.print_component_summary()
+        summary_time = time.time() - summary_start
+        print(f"Summary generated in {summary_time:.4f} seconds")
+    elif choice == '4':
+        print("Exiting...")
+    else:
+        print("Invalid choice")
+    
+    management_time = time.time() - management_start
+    print(f"Team data management completed in {management_time:.3f} seconds")
+
+def run_trajectory_optimization(show_plots=None):
+    """
+    Run trajectory analysis and provide optimization suggestions for reaching 100km (optimized)
+    
+    Args:
+        show_plots: Override config setting for plot display (None uses config default)
+    """
+    optimization_start = time.time()
+    
+    # Determine plot display setting
+    display_plots = config.show_plots if show_plots is None else show_plots
+    
+    print("\nRunning trajectory optimization analysis...")
+    if not display_plots:
+        print("(Plot display disabled - results will be saved to PDF only)")
+    
+    # Load team data first
+    component_manager = load_team_data()
+    flight_simulator.component_manager = component_manager
+    
+    # Run simulation to get trajectory data
+    print("Simulating current configuration...")
+    
+    # Initialize and run the simulation
+    sim_start = time.time()
+    used_material = flight_simulator.init(material_name=config.fin_material, fast_mode=True)
+    limit_reached = flight_simulator.run_simulation()
+    sim_time = time.time() - sim_start
+    print(f"Simulation completed in {sim_time:.3f} seconds")
+    
+    # Create optimizer and analyze
+    analysis_start = time.time()
+    optimizer = TrajectoryOptimizer(target_altitude=100000)  # 100 km target
+    
+    # Analyze the trajectory
+    results = optimizer.analyze_trajectory(flight_simulator.r, flight_simulator.rc, flight_simulator.time_points)
+    
+    # Generate optimization suggestions
+    suggestions = optimizer.generate_suggestions()
+    analysis_time = time.time() - analysis_start
+    print(f"Analysis completed in {analysis_time:.3f} seconds")
+    
+    # Print the report
+    print("\n" + optimizer.generate_report())
+    
+    # Create visualizations
+    print("\nGenerating analysis plots...")
+    plot_start = time.time()
+    fig = optimizer.plot_analysis(show=display_plots)
+    plot_time = time.time() - plot_start
+    
+    # Save as PDF with initial conditions
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    # Save the figure as PDF
+    save_start = time.time()
+    pdf_filename = "TO_analysis.pdf"
+    pdf_path = os.path.join(output_dir, pdf_filename)
+    
+    print(f"Generating trajectory optimization PDF: {pdf_filename}")
+    with PdfPages(pdf_path) as pdf:
+        pdf.savefig(fig)
+        # Add initial conditions pages (can be multiple)
+        fig_conditions_list = create_initial_conditions_page(
+            "trajectory", 
+            target_altitude=100000,
+            component_manager=component_manager
+        )
+        for fig_conditions in fig_conditions_list:
+            pdf.savefig(fig_conditions)
+            plt.close(fig_conditions)
+    save_time = time.time() - save_start
+    
+    print(f"PDF report generated in {save_time:.3f} seconds")
+    print(f"Plotting completed in {plot_time:.3f} seconds")
+    
+    # Show plots if enabled
+    if display_plots:
+        plt.show()
+    
+    # Ask if user wants to see specific optimization details
+    if suggestions and optimizer.altitude_deficit > 0:
+        print("\nWould you like to explore specific optimization scenarios?")
+        print("1. Mass reduction details")
+        print("2. Aerodynamic improvements")
+        print("3. Propellant optimization")
+        print("4. Return to main menu")
+        
+        choice = input("\nEnter choice (1-4): ")
+        
+        if choice in ['1', '2', '3']:
+            # Filter suggestions by category
+            category_map = {
+                '1': 'Mass Reduction',
+                '2': 'Aerodynamics', 
+                '3': 'Propellant Optimization'
+            }
+            
+            category = category_map.get(choice)
+            filtered = [s for s in suggestions if s['category'] == category or s['category'] == 'Structural Optimization']
+            
+            if filtered:
+                print(f"\n{category} Details:")
+                print("-" * 40)
+                for suggestion in filtered:
+                    print(f"\n• {suggestion['suggestion']}")
+                    print(f"  Impact: {suggestion['impact']}")
+                    if 'implementation' in suggestion:
+                        print(f"  How to implement: {suggestion['implementation']}")
+            else:
+                print(f"\nNo specific suggestions available for {category}")
+    
+    # Clear caches
+    flight_simulator.clear_simulation_caches()
+    
+    optimization_time = time.time() - optimization_start
+    print(f"Trajectory optimization completed in {optimization_time:.3f} seconds")
+
+def main_menu(show_plots=None):
+    """
+    Display interactive menu for analysis options (optimized)
+    
+    Args:
+        show_plots: Override config setting for plot display (None uses config default)
+    """
+    menu_start = time.time()
+    
+    # Determine plot display setting
+    display_plots = config.show_plots if show_plots is None else show_plots
+    
+    while True:
+        print("\n===== Rocket Analysis Tools =====")
+        print("1. Run flight simulation with default material")
+        print("2. Run flight simulation with specific material")
+        print("3. Run material comparison (fast mode)")
+        print("4. Run material comparison (detailed mode)")
+        print("5. Run stability analysis (all flight stages)")
+        print("6. Run stability analysis (specific flight stage)")
+        print("7. Trajectory optimization (100km target)") 
+        print("8. Manage team component data")
+        print("9. Toggle plot display (currently " + ("ON" if display_plots else "OFF") + ")")
+        print("10. Exit")
+        
+        choice = input("\nEnter choice (1-10): ")
+        choice_start = time.time()
+        
+        if choice == '1':
+            run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+        elif choice == '2':
+            # Get available materials
+            material_start = time.time()
+            fin = RocketFin()
+            materials = fin.get_available_materials()
+            material_load_time = time.time() - material_start
+            
+            print(f"\nAvailable materials (loaded in {material_load_time:.3f}s):")
+            for i, material in enumerate(materials, 1):
+                print(f"{i}. {material}")
+            
+            mat_choice = input("\nSelect material (enter number): ")
+            try:
+                mat_idx = int(mat_choice) - 1
+                if 0 <= mat_idx < len(materials):
+                    run_single_material_analysis(materials[mat_idx], fast_mode=False, show_plots=display_plots)
+                else:
+                    print("Invalid selection, using default material.")
+                    run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+            except ValueError:
+                print("Invalid input, using default material.")
+                run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+        elif choice == '3':
+            run_material_comparison(fast_mode=True, show_plots=display_plots)
+        elif choice == '4':
+            run_material_comparison(fast_mode=False, show_plots=display_plots)
+        elif choice == '5':
+            run_stability_analysis(flight_stage="all", show_plots=display_plots)
+        elif choice == '6':
+            print("\nAvailable flight stages:")
+            print("1. Launch")
+            print("2. Burnout")
+            print("3. Apogee")
+            print("4. Landing")
+            
+            stage_choice = input("\nSelect flight stage (enter number): ")
+            stages = ["launch", "burnout", "apogee", "landing"]
+            
+            try:
+                stage_idx = int(stage_choice) - 1
+                if 0 <= stage_idx < len(stages):
+                    run_stability_analysis(flight_stage=stages[stage_idx], show_plots=display_plots)
+                else:
+                    print("Invalid selection, analyzing all stages.")
+                    run_stability_analysis(flight_stage="all", show_plots=display_plots)
+            except ValueError:
+                print("Invalid input, analyzing all stages.")
+                run_stability_analysis(flight_stage="all", show_plots=display_plots)
+        elif choice == '7': 
+            run_trajectory_optimization(show_plots=display_plots)
+        elif choice == '8':
+            manage_team_data()
+        elif choice == '9':
+            display_plots = not display_plots
+            print(f"Plot display toggled to: {'ON' if display_plots else 'OFF'}")
+            print("Note: PDF reports are always generated regardless of this setting")
+        elif choice == '10': 
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice. Please enter a number between 1 and 10.")
+        
+        choice_time = time.time() - choice_start
+        print(f"Menu option completed in {choice_time:.3f} seconds")
+    
+    menu_time = time.time() - menu_start
+    print(f"Menu session lasted {menu_time:.3f} seconds")
+            
+if __name__ == "__main__":
+    execution_start = time.time()
+    
+    parser = argparse.ArgumentParser(description="Rocket Analysis Tools (Optimized)")
+    parser.add_argument("-m", "--material", help="Specify fin material")
+    parser.add_argument("-c", "--compare", action="store_true", help="Run material comparison")
+    parser.add_argument("-f", "--fast", action="store_true", help="Run in fast mode")
+    parser.add_argument("-i", "--interactive", action="store_true", help="Interactive menu mode")
+    parser.add_argument("-s", "--stability", action="store_true", help="Run stability analysis")
+    parser.add_argument("--stage", help="Flight stage for stability analysis (launch, burnout, apogee, landing)")
+    parser.add_argument("-t", "--team-data", action="store_true", help="Manage team component data")
+    parser.add_argument("--show-plots", action="store_true", help="Override config to show plots on screen")
+    parser.add_argument("--hide-plots", action="store_true", help="Override config to hide plots on screen")
+    
+    args = parser.parse_args()
+    
+    # Determine plot display setting
+    if args.show_plots:
+        show_plots_override = True
+        print("Plot display enabled via command line")
+    elif args.hide_plots:
+        show_plots_override = False
+        print("Plot display disabled via command line")
+    else:
+        show_plots_override = None
+        if config.show_plots:
+            print("Plot display enabled via config")
+        else:
+            print("Plot display disabled via config")
+    
+    if args.interactive:
+        main_menu(show_plots=show_plots_override)
+    elif args.stability:
+        run_stability_analysis(flight_stage=args.stage, show_plots=show_plots_override)
+    elif args.team_data:
+        manage_team_data()
+    elif args.compare:
+        run_material_comparison(fast_mode=args.fast, show_plots=show_plots_override)
+    elif args.material:
+        run_single_material_analysis(args.material, fast_mode=args.fast, show_plots=show_plots_override)
+    else:
+        run_single_material_analysis(fast_mode=args.fast, show_plots=show_plots_override)
+    
+    execution_time = time.time() - execution_start
+    print(f"\nTotal program execution time: {execution_time:.3f} seconds")
