@@ -142,9 +142,7 @@ class Visualization:
         
         if return_fig:
             return fig, fig2
-        else:
-            plt.show()
-            return fig, fig2
+
     
     def compare_materials(self, velocities=None, altitudes=None, use_cached=True, fast_mode=True, return_data=False):
         if velocities is None:
@@ -316,9 +314,6 @@ class Visualization:
             plt.tight_layout()
             
             if return_fig:
-                return fig
-            else:
-                plt.show()
                 return fig
 
 def main():

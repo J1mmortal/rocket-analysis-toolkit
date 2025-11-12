@@ -212,7 +212,10 @@ class FinTemperatureTracker:
             temperature = self.thermal_analyzer.current_temperature.copy()
             
         X, Y = self.thermal_analyzer.X, self.thermal_analyzer.Y
+        if self.mask is None or self.mask.shape != temperature.shape:
+            self.mask = np.zeros_like(temperature, dtype=bool)
         masked_temp = np.ma.array(temperature, mask=self.mask)
+
         
         fig, ax = plt.subplots(figsize=(10, 10))
         contour = ax.contourf(X, Y, masked_temp, cmap=self.cmap, levels=20)

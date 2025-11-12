@@ -201,8 +201,6 @@ class RocketStability:
             self.calculate_stability()
         if hasattr(config, 'show_rocket_configuration') and config.show_rocket_configuration == "1D":
             return self._plot_1d_stability()
-        elif hasattr(config, 'show_rocket_configuration') and config.show_rocket_configuration == "3D":
-            return self._plot_3d_stability(show_components)
         else:
             return self._plot_2d_stability(show_components)
     
@@ -277,42 +275,7 @@ class RocketStability:
         
         plt.tight_layout()
         return fig, ax
-    
-    def _plot_3d_stability(self, show_components=True):
-        """Plot a 3D representation of the rocket with CP and CM marked"""
-        from mpl_toolkits.mplot3d import Axes3D
         
-        fig = plt.figure(figsize=(12, 8))
-        ax = fig.add_subplot(111, projection='3d')
-        
-        # Draw 3D rocket (simplified)
-        self._draw_rocket_3d(ax)
-        
-        # Mark CP and CM
-        ax.scatter([self.center_of_mass], [0], [0], color='blue', s=100, label='Center of Mass')
-        ax.scatter([self.center_of_pressure], [0], [0], color='red', s=100, label='Center of Pressure')
-        
-        # Add stability line
-        if self.stability_margin > 0:
-            ax.plot([self.center_of_mass, self.center_of_pressure], [0, 0], [0, 0], 
-                    'g--', linewidth=2, label=f'Stability Margin: {self.stability_calibers:.2f} calibers')
-        else:
-            ax.plot([self.center_of_mass, self.center_of_pressure], [0, 0], [0, 0], 
-                    'r--', linewidth=2, label=f'Unstable: {self.stability_calibers:.2f} calibers')
-        
-        ax.set_xlabel('X (m)')
-        ax.set_ylabel('Y (m)')
-        ax.set_zlabel('Z (m)')
-        ax.set_title('Rocket Stability 3D View')
-        max_dim = max(self.length, self.diameter * 2)
-        ax.set_xlim(0, self.length)
-        ax.set_ylim(-max_dim/2, max_dim/2)
-        ax.set_zlim(-max_dim/2, max_dim/2)
-        
-        ax.legend()
-        plt.tight_layout()
-        return fig, ax
-    
     def _draw_rocket_2d(self, ax):
         nose_x = np.linspace(0, self.nose_cone_length, 20)
         
@@ -422,62 +385,6 @@ class RocketStability:
                     ha='center', va='bottom', color='red',
                     bbox=dict(facecolor='white', alpha=0.7))
     
-    def _draw_rocket_3d(self, ax):
-        u = np.linspace(0, 2 * np.pi, 20)
-        v = np.linspace(0, np.pi/2, 20)
-        
-        if self.nose_cone_shape == "conical":
-            # Conical nose
-            for i in range(20):
-                z = i / 19 * self.nose_cone_length
-                r = i / 19 * self.radius
-                x = z
-                y = r * np.sin(u)
-                z_circle = r * np.cos(u)
-                ax.plot(np.ones_like(u) * x, y, z_circle, 'k-', linewidth=0.5, alpha=0.3)
-        else:
-            for i in range(20):
-                t = i / 19
-                z = t * self.nose_cone_length
-                if self.nose_cone_shape == "ogive":
-                    rho = (self.radius**2 + self.nose_cone_length**2) / (2 * self.radius)
-                    y_offset = np.sqrt(rho**2 - self.nose_cone_length**2)
-                    r = np.sqrt(rho**2 - (self.nose_cone_length - z)**2) - y_offset
-                else:
-                    r = self.radius * np.sqrt(1 - (1-t)**2)
-                
-                x = z
-                y = r * np.sin(u)
-                z_circle = r * np.cos(u)
-                ax.plot(np.ones_like(u) * x, y, z_circle, 'k-', linewidth=0.5, alpha=0.3)
-        
-        for i in range(10):
-            z = self.nose_cone_length + i / 9 * (self.length - self.nose_cone_length)
-            x = z
-            y = self.radius * np.sin(u)
-            z_circle = self.radius * np.cos(u)
-            ax.plot(np.ones_like(u) * x, y, z_circle, 'k-', linewidth=0.5, alpha=0.3)
-        
-        if self.fin_height and self.fin_width:
-            for fin_angle in np.linspace(0, 2*np.pi, self.num_fins, endpoint=False):
-                fin_x = np.array([
-                    self.fin_position,
-                    self.fin_position + self.fin_sweep,
-                    self.fin_position + self.fin_width,
-                    self.fin_position
-                ])
-                
-                fin_y_base = np.array([
-                    self.radius,
-                    self.radius + self.fin_height,
-                    self.radius,
-                    self.radius
-                ])
-                
-                fin_y = fin_y_base * np.sin(fin_angle)
-                fin_z = fin_y_base * np.cos(fin_angle)
-                ax.plot(fin_x, fin_y, fin_z, 'k-', linewidth=2)
-                ax.plot_trisurf(fin_x, fin_y, fin_z, color='lightgray', alpha=0.6)
 
 def plot_rocket_stability(rocket_fin=None, current_mass=None, mach=None):
     stability = RocketStability()
@@ -516,7 +423,6 @@ def main():
         current_mass=propellant_mass,
         mach=0.1
     )
-    plt.show()
     
     print("\nStability with half propellant load:")
     fig, ax = plot_rocket_stability(
@@ -524,7 +430,6 @@ def main():
         current_mass=propellant_mass * 0.5,  
         mach=2.0
     )
-    plt.show()
     
     print("\nStability with empty propellant load:")
     fig, ax = plot_rocket_stability(
@@ -532,7 +437,6 @@ def main():
         current_mass=0.0, 
         mach=0.5 
     )
-    plt.show()
     propellant_fractions = [1.0, 0.75, 0.5, 0.25, 0.0]
     
     fig, axes = plt.subplots(len(propellant_fractions), 1, figsize=(12, 4*len(propellant_fractions)))
@@ -563,7 +467,6 @@ def main():
         axes[i].legend(loc='lower right')
     
     plt.tight_layout()
-    plt.show()
 
 if __name__ == "__main__":
     main()

@@ -45,12 +45,6 @@ animation_frames = 120  # Number of frames for animation
 pdf_output_enabled = True  # Enable PDF report generation
 pdf_dpi = 300  # Resolution for PDF figures
 
-### Plot Display Configuration
-# Control whether plots are displayed on screen during analysis
-# PDF generation is ALWAYS enabled regardless of this setting
-show_plots = False  # Set to True to display plots on screen, False to suppress them
-# Note: This can be overridden with --show-plots command line argument
-
 ### Rocket geometry for stability analysis
 rocket_length = 2.5  # m
 rocket_diameter = 0.25 * 2  # m (derived from existing radius parameter)

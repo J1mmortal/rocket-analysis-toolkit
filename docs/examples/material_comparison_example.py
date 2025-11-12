@@ -31,7 +31,7 @@ def compare_fin_materials_for_flight(fast_mode=True):
         component_manager.update_config()
         
         flight_simulator.component_manager = component_manager
-        flight_simulator.main(skip_plots=True, material_name="Titanium Ti-6Al-4V", fast_mode=True, skip_animation=True)
+        flight_simulator.main(material_name="Titanium Ti-6Al-4V", fast_mode=True, skip_animation=True)
         print(f"Initial simulation completed. Maximum dynamic pressure: {config.max_q:.1f} Pa")
     
     rocket_fin.max_q = config.max_q
@@ -60,7 +60,7 @@ def compare_fin_materials_for_flight(fast_mode=True):
         flight_simulator.fin_tracker = None
         
         sim_start = time.time()
-        flight_simulator.main(skip_plots=True, material_name=material, fast_mode=fast_mode, skip_animation=True)
+        flight_simulator.main(material_name=material, fast_mode=fast_mode, skip_animation=True)
         sim_time = time.time() - sim_start
         simulation_times.append(sim_time)
         

@@ -145,7 +145,7 @@ class TrajectoryOptimizer:
                     'category': 'Mass Reduction',
                     'suggestion': f'Optimize {comp_name} design for weight reduction',
                     'impact': f'Potential mass saving: {reduction_potential:.1f} kg → ~{altitude_gain/1000:.1f} km altitude gain',
-                    'implementation': f'Consider: Composite materials, hollow structures, topology optimization'
+                    'implementation': 'Consider: Composite materials, hollow structures, topology optimization'
                 })
         
         if dry_mass > 50:
@@ -233,12 +233,12 @@ class TrajectoryOptimizer:
             self.suggestions.append({
                 'priority': 2,
                 'category': 'Trajectory Optimization',
-                'suggestion': f'Optimize launch angle and thrust vectoring',
+                'suggestion': 'Optimize launch angle and thrust vectoring',
                 'impact': f'Current angle: ~{flight_angle:.0f}°, Optimal: {optimal_angle}° → ~{altitude_gain/1000:.1f} km gain',
                 'implementation': 'Add simple thrust vectoring or optimize launch rail angle'
             })
 
-    def plot_analysis(self, show=True):
+    def plot_analysis(self):
         if not self.trajectory_data:
             print("No trajectory data available for plotting")
             return
@@ -354,9 +354,6 @@ class TrajectoryOptimizer:
                 fontsize=10, verticalalignment='top', fontfamily='monospace')
         
         plt.tight_layout()
-        
-        if show:
-            plt.show()
         
         return fig
     

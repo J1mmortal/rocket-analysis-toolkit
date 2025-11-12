@@ -304,7 +304,7 @@ def run_simulation():
     
     return limit_reached
 
-def main(skip_plots=False, material_name=None, fast_mode=False, skip_animation=False):
+def main(material_name=None, fast_mode=False, skip_animation=False):
     start_time = time.time()
     
     used_material = init(material_name, fast_mode)
@@ -317,15 +317,13 @@ def main(skip_plots=False, material_name=None, fast_mode=False, skip_animation=F
     if not fast_mode:
         report(limit_reached)
     
-    if skip_plots:
-        if fast_mode and hasattr(fin_tracker.thermal_analyzer, 'set_comparison_mode'):
-            fin_tracker.thermal_analyzer.set_comparison_mode(False)
-            
-        return
+    if fast_mode and hasattr(fin_tracker.thermal_analyzer, 'set_comparison_mode'):
+        fin_tracker.thermal_analyzer.set_comparison_mode(False)
+
     
     plot_start = time.time()
-    flight_fig = plot_flight_data(show=(not skip_plots))  
-    temp_figs = plot_fin_temperature(show=(not skip_plots))
+    flight_fig = plot_flight_data()  
+    temp_figs = plot_fin_temperature()
     plot_time = time.time() - plot_start
     
     if not fast_mode:
@@ -346,7 +344,7 @@ def main(skip_plots=False, material_name=None, fast_mode=False, skip_animation=F
     if not fast_mode:
         print(f"Total simulation completed in {total_time:.3f} seconds")
 
-def plot_flight_data(show=True):
+def plot_flight_data():
     plot_start = time.time()
     
     times = np.array(time_points)
@@ -380,16 +378,12 @@ def plot_flight_data(show=True):
     ax[1, 1].set_xlabel("Time (s)")
     ax[1, 1].set_ylabel("Temperature (K)")
     ax[1, 1].grid(True, linestyle='--', alpha=0.7)
-    plt.tight_layout()
-    
-    if show:
-        plt.show()
-    
+    plt.tight_layout() 
     print(f"Flight data plotting completed in {time.time() - plot_start:.3f} seconds")
     
     return fig
     
-def plot_fin_temperature(show=True):
+def plot_fin_temperature():
     plot_start = time.time()
     
     figures = []
@@ -397,8 +391,6 @@ def plot_fin_temperature(show=True):
     if fin_tracker:
         fig = fin_tracker.plot_temperature_history()
         figures.append(fig)
-        if show:
-            plt.show()
         
         critical_points = fin_tracker.get_critical_time_points()
         if "max_temperature" in critical_points:
@@ -409,8 +401,6 @@ def plot_fin_temperature(show=True):
             fig = fin_tracker.plot_temperature_snapshot(max_temp_idx, max_temp_time, max_temp_mach)
             fig.suptitle("Temperature Distribution at Maximum Temperature", fontsize=16)
             figures.append(fig)
-            if show:
-                plt.show()
     
         if "max_velocity" in critical_points:
             max_vel_time = critical_points["max_velocity"]["time"]
@@ -420,15 +410,13 @@ def plot_fin_temperature(show=True):
             fig = fin_tracker.plot_temperature_snapshot(max_vel_idx, max_vel_time, max_vel_mach)
             fig.suptitle("Temperature Distribution at Maximum Velocity", fontsize=16)
             figures.append(fig)
-            if show:
-                plt.show()
         
         plot_time = time.time() - plot_start
         print(f"Temperature plotting completed in {plot_time:.3f} seconds")
         return figures
     return []
 
-def plot_stability_during_flight(show=True):
+def plot_stability_during_flight():
     plot_start = time.time()
     global r, time_points
     
@@ -527,10 +515,7 @@ def plot_stability_during_flight(show=True):
             axes[i].set_xlabel('Distance from Nose Tip (m)')
         
         axes[i].legend(loc='lower right')
-    plt.tight_layout()
-    if show:
-        plt.show()
-    
+    plt.tight_layout()   
     plot_time = time.time() - plot_start
     print(f"Stability analysis plotting completed in {plot_time:.3f} seconds")
     return fig

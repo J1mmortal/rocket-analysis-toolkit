@@ -687,25 +687,15 @@ def create_material_comparison_pdf(output_path, results, fast_mode=False, compon
             pdf.savefig(fig_conditions)
             plt.close(fig_conditions)
 
-def run_single_material_analysis(material_name=None, fast_mode=True, show_plots=None):
-    """
-    Args:
-        material_name: Name of the material to use (use default if None)
-        fast_mode: Use optimized settings for faster execution
-        show_plots: Override config setting for plot display (None uses config default)
-    """
+def run_single_material_analysis(material_name=None, fast_mode=True):
     analysis_start = time.time()
-    display_plots = config.show_plots if show_plots is None else show_plots
     
     component_manager = load_team_data()
     
     if material_name is None:
         material_name = config.fin_material
     
-    print(f"\nRunning flight simulation with fin material: {material_name}")
-    if not display_plots:
-        print("(Plot display disabled - results will be saved to PDF only)")
-    
+    print(f"\nRunning flight simulation with fin material: {material_name}")    
     component_manager.print_component_summary()
     print("\nSetting dynamic pressure parameters for fin calculations...")
     
@@ -733,7 +723,7 @@ def run_single_material_analysis(material_name=None, fast_mode=True, show_plots=
     flight_simulator.component_manager = component_manager
     
     sim_start = time.time()
-    flight_simulator.main(skip_plots=(not display_plots), material_name=material_name, fast_mode=fast_mode, skip_animation=True)
+    flight_simulator.main(material_name=material_name, fast_mode=fast_mode, skip_animation=True)
     sim_time = time.time() - sim_start
     
     output_dir = "output"
@@ -803,21 +793,13 @@ def run_single_material_analysis(material_name=None, fast_mode=True, show_plots=
     total_time = time.time() - analysis_start
     print(f"Complete analysis finished in {total_time:.3f} seconds (simulation: {sim_time:.3f}s)")
 
-def run_material_comparison(fast_mode=True, show_plots=None):
-    """
-    Args:
-        fast_mode: Use optimized settings for faster execution
-        show_plots: Override config setting for plot display (None uses config default)
-    """
+def run_material_comparison(fast_mode=True):
+
     comparison_start = time.time()
-    
-    display_plots = config.show_plots if show_plots is None else show_plots
     component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
     
     print("\nRunning material comparison for all available materials...")
-    if not display_plots:
-        print("(Plot display disabled - results will be saved to PDF only)")
     results = material_comparison_example.compare_fin_materials_for_flight(fast_mode=fast_mode)
     results.sort(key=lambda x: (not x["Within Limits"], x["Mass (kg)"]))
     
@@ -848,7 +830,7 @@ def run_material_comparison(fast_mode=True, show_plots=None):
         if not fast_mode:
             user_input = input("\nRun detailed analysis for the recommended material? (y/n): ")
             if user_input.lower() == 'y':
-                run_single_material_analysis(best_material, fast_mode=False, show_plots=display_plots)
+                run_single_material_analysis(best_material, fast_mode=False)
     else:
         print("\nWarning: No material can withstand the thermal conditions of this flight profile.")
         results.sort(key=lambda x: -x["Temperature Margin (K)"])
@@ -857,21 +839,14 @@ def run_material_comparison(fast_mode=True, show_plots=None):
         if not fast_mode:
             user_input = input("\nRun detailed analysis for this material? (y/n): ")
             if user_input.lower() == 'y':
-                run_single_material_analysis(least_bad_material, fast_mode=False, show_plots=display_plots)
+                run_single_material_analysis(least_bad_material, fast_mode=False)
 
     flight_simulator.clear_simulation_caches()
     comparison_time = time.time() - comparison_start
     print(f"Material comparison completed in {comparison_time:.3f} seconds")
 
-def run_stability_analysis(flight_stage=None, show_plots=None):
-    """
-    Args:
-        flight_stage: Specific flight stage to analyze (launch, burnout, apogee, etc.)
-                     If None, analyze all stages
-        show_plots: Override config setting for plot display (None uses config default)
-    """
+def run_stability_analysis(flight_stage=None):
     stability_start = time.time()
-    display_plots = config.show_plots if show_plots is None else show_plots
     component_manager = load_team_data()
     
     fin_init_start = time.time()
@@ -881,11 +856,7 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
     
     stability = RocketStability()
     stability.set_fin_properties(fin)
-    component_manager.print_component_summary()
-    
-    if not display_plots:
-        print("(Plot display disabled - results will be saved to PDF only)")
-    
+    component_manager.print_component_summary()    
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -896,7 +867,7 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         tracker = FinTemperatureTracker(fin)
         flight_simulator.fin_tracker = tracker
         flight_simulator.component_manager = component_manager  # Pass the component manager to main
-        flight_simulator.main(skip_plots=True, material_name=config.fin_material, fast_mode=True, skip_animation=True)
+        flight_simulator.main(material_name=config.fin_material, fast_mode=True, skip_animation=True)
         sim_time = time.time() - sim_start
         print(f"Flight simulation completed in {sim_time:.3f} seconds")
         print("\nGenerating stability diagrams throughout flight...")
@@ -984,9 +955,7 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         
         print(f"PDF report generated in {pdf_time:.3f} seconds")
         print(f"Plotting completed in {plot_time:.3f} seconds")
-        
-        if display_plots:
-            plt.show()
+
     
     flight_simulator.clear_simulation_caches()
     
@@ -1030,18 +999,11 @@ def manage_team_data():
     management_time = time.time() - management_start
     print(f"Team data management completed in {management_time:.3f} seconds")
 
-def run_trajectory_optimization(show_plots=None):
-    """
-    Args:
-        show_plots: Override config setting for plot display (None uses config default)
-    """
+def run_trajectory_optimization():
+
     optimization_start = time.time()
     
-    display_plots = config.show_plots if show_plots is None else show_plots
-    
     print("\nRunning trajectory optimization analysis...")
-    if not display_plots:
-        print("(Plot display disabled - results will be saved to PDF only)")
     
     component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
@@ -1063,7 +1025,7 @@ def run_trajectory_optimization(show_plots=None):
     
     print("\nGenerating analysis plots...")
     plot_start = time.time()
-    fig = optimizer.plot_analysis(show=display_plots)
+    fig = optimizer.plot_analysis()
     plot_time = time.time() - plot_start
     
     output_dir = "output"
@@ -1089,9 +1051,6 @@ def run_trajectory_optimization(show_plots=None):
     
     print(f"PDF report generated in {save_time:.3f} seconds")
     print(f"Plotting completed in {plot_time:.3f} seconds")
-    
-    if display_plots:
-        plt.show()
     
     if suggestions and optimizer.altitude_deficit > 0:
         print("\nWould you like to explore specific optimization scenarios?")
@@ -1127,10 +1086,8 @@ def run_trajectory_optimization(show_plots=None):
     optimization_time = time.time() - optimization_start
     print(f"Trajectory optimization completed in {optimization_time:.3f} seconds")
 
-def main_menu(show_plots=None):
+def main_menu():
     menu_start = time.time()
-    
-    display_plots = config.show_plots if show_plots is None else show_plots
     
     while True:
         print("\n===== Rocket Analysis Tools =====")
@@ -1142,14 +1099,13 @@ def main_menu(show_plots=None):
         print("6. Run stability analysis (specific flight stage)")
         print("7. Trajectory optimization (100km target)") 
         print("8. Manage team component data")
-        print("9. Toggle plot display (currently " + ("ON" if display_plots else "OFF") + ")")
-        print("10. Exit")
+        print("9. Exit")
         
-        choice = input("\nEnter choice (1-10): ")
+        choice = input("\nEnter choice (1-9): ")
         choice_start = time.time()
         
         if choice == '1':
-            run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+            run_single_material_analysis(fast_mode=False)
         elif choice == '2':
             material_start = time.time()
             fin = RocketFin()
@@ -1164,19 +1120,19 @@ def main_menu(show_plots=None):
             try:
                 mat_idx = int(mat_choice) - 1
                 if 0 <= mat_idx < len(materials):
-                    run_single_material_analysis(materials[mat_idx], fast_mode=False, show_plots=display_plots)
+                    run_single_material_analysis(materials[mat_idx], fast_mode=False)
                 else:
                     print("Invalid selection, using default material.")
-                    run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+                    run_single_material_analysis(fast_mode=False)
             except ValueError:
                 print("Invalid input, using default material.")
-                run_single_material_analysis(fast_mode=False, show_plots=display_plots)
+                run_single_material_analysis(fast_mode=False)
         elif choice == '3':
-            run_material_comparison(fast_mode=True, show_plots=display_plots)
+            run_material_comparison(fast_mode=True)
         elif choice == '4':
-            run_material_comparison(fast_mode=False, show_plots=display_plots)
+            run_material_comparison(fast_mode=False)
         elif choice == '5':
-            run_stability_analysis(flight_stage="all", show_plots=display_plots)
+            run_stability_analysis(flight_stage="all")
         elif choice == '6':
             print("\nAvailable flight stages:")
             print("1. Launch")
@@ -1190,26 +1146,23 @@ def main_menu(show_plots=None):
             try:
                 stage_idx = int(stage_choice) - 1
                 if 0 <= stage_idx < len(stages):
-                    run_stability_analysis(flight_stage=stages[stage_idx], show_plots=display_plots)
+                    run_stability_analysis(flight_stage=stages[stage_idx])
                 else:
                     print("Invalid selection, analyzing all stages.")
-                    run_stability_analysis(flight_stage="all", show_plots=display_plots)
+                    run_stability_analysis(flight_stage="all")
             except ValueError:
                 print("Invalid input, analyzing all stages.")
-                run_stability_analysis(flight_stage="all", show_plots=display_plots)
+                run_stability_analysis(flight_stage="all")
         elif choice == '7': 
-            run_trajectory_optimization(show_plots=display_plots)
+            run_trajectory_optimization()
         elif choice == '8':
             manage_team_data()
-        elif choice == '9':
-            display_plots = not display_plots
-            print(f"Plot display toggled to: {'ON' if display_plots else 'OFF'}")
-            print("Note: PDF reports are always generated regardless of this setting")
-        elif choice == '10': 
+        elif choice == '9': 
+            plt.close('all')
             print("Exiting...")
             break
         else:
-            print("Invalid choice. Please enter a number between 1 and 10.")
+            print("Invalid choice. Please enter a number between 1 and 9.")
         
         choice_time = time.time() - choice_start
         print(f"Menu option completed in {choice_time:.3f} seconds")
@@ -1228,36 +1181,21 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--stability", action="store_true", help="Run stability analysis")
     parser.add_argument("--stage", help="Flight stage for stability analysis (launch, burnout, apogee, landing)")
     parser.add_argument("-t", "--team-data", action="store_true", help="Manage team component data")
-    parser.add_argument("--show-plots", action="store_true", help="Override config to show plots on screen")
-    parser.add_argument("--hide-plots", action="store_true", help="Override config to hide plots on screen")
     
     args = parser.parse_args()
-    
-    if args.show_plots:
-        show_plots_override = True
-        print("Plot display enabled via command line")
-    elif args.hide_plots:
-        show_plots_override = False
-        print("Plot display disabled via command line")
-    else:
-        show_plots_override = None
-        if config.show_plots:
-            print("Plot display enabled via config")
-        else:
-            print("Plot display disabled via config")
-    
+
     if args.interactive:
-        main_menu(show_plots=show_plots_override)
+        main_menu()
     elif args.stability:
-        run_stability_analysis(flight_stage=args.stage, show_plots=show_plots_override)
+        run_stability_analysis(flight_stage=args.stage)
     elif args.team_data:
         manage_team_data()
     elif args.compare:
-        run_material_comparison(fast_mode=args.fast, show_plots=show_plots_override)
+        run_material_comparison(fast_mode=args.fast)
     elif args.material:
-        run_single_material_analysis(args.material, fast_mode=args.fast, show_plots=show_plots_override)
+        run_single_material_analysis(args.material, fast_mode=args.fast)
     else:
-        run_single_material_analysis(fast_mode=args.fast, show_plots=show_plots_override)
+        run_single_material_analysis(fast_mode=args.fast)
     
     execution_time = time.time() - execution_start
     print(f"\nTotal program execution time: {execution_time:.3f} seconds")
