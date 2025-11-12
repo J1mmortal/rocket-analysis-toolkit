@@ -7,17 +7,11 @@ from src.rocket_toolkit.geometry.rocket_fin import RocketFin
 import isacalc as isa
 
 class TrajectoryOptimizer:
-    """
-    Analyzes rocket trajectory and provides optimization suggestions to reach target altitude
-    """
-    
     def __init__(self, target_altitude=100000):
         self.target_altitude = target_altitude  # meters
         self.std_atm = isa.Atmosphere()
         self.component_manager = ComponentData()
         self.component_manager.update_from_team_files()
-        
-        # Analysis results storage
         self.trajectory_data = None
         self.max_altitude = None
         self.altitude_deficit = None
@@ -26,8 +20,6 @@ class TrajectoryOptimizer:
         
     def analyze_trajectory(self, r, rc, time_points):
         """
-        Analyze the flight trajectory data
-        
         Args:
             r: List of rocket_variables from simulation
             rc: rocket_constants object
@@ -39,7 +31,6 @@ class TrajectoryOptimizer:
             'time': time_points
         }
         
-        # Extract key metrics
         altitudes = [state.altitude for state in r]
         velocities = [state.speed for state in r]
         fuel_masses = [state.fuel_mass for state in r]
@@ -48,13 +39,11 @@ class TrajectoryOptimizer:
         self.max_altitude = max(altitudes)
         self.altitude_deficit = self.target_altitude - self.max_altitude
         
-        # Find key flight events
         max_vel_idx = velocities.index(max(velocities))
         burnout_idx = next((i for i, mass in enumerate(fuel_masses) if mass == 0), len(fuel_masses)-1)
         max_q_idx = dynamic_pressures.index(max(dynamic_pressures))
         apogee_idx = altitudes.index(self.max_altitude)
         
-        # Calculate performance metrics
         self.analysis_results = {
             'max_altitude': self.max_altitude,
             'altitude_deficit': self.altitude_deficit,
@@ -76,47 +65,38 @@ class TrajectoryOptimizer:
         return self.analysis_results
     
     def _calculate_delta_v(self, r, rc, burnout_idx):
-        """Calculate achieved delta-v using Tsiolkovsky equation verification"""
         initial_mass = rc.dry_weight + r[0].fuel_mass
         final_mass = rc.dry_weight
-        avg_isp = (rc.isp_sea + rc.isp_vac) / 2  # Simplified average
+        avg_isp = (rc.isp_sea + rc.isp_vac) / 2
         
         delta_v_ideal = avg_isp * 9.81 * np.log(initial_mass / final_mass)
         return delta_v_ideal
     
     def _calculate_gravity_losses(self, r, time_points, burnout_idx):
-        """Estimate gravity losses during powered flight"""
         g = 9.81
         gravity_loss = 0
         
         for i in range(1, min(burnout_idx, len(r))):
             dt = time_points[i] - time_points[i-1]
-            # Gravity loss is g * sin(flight_path_angle) * dt
-            # For vertical flight, this is approximately g * dt
-            vertical_component = 1.0  # Assuming mostly vertical flight
+            vertical_component = 1.0
             gravity_loss += g * vertical_component * dt
             
         return gravity_loss
     
     def _calculate_drag_losses(self, r, rc, time_points, burnout_idx):
-        """Estimate drag losses during powered flight"""
         drag_loss = 0
         
         for i in range(1, min(burnout_idx, len(r))):
             dt = time_points[i] - time_points[i-1]
             velocity = r[i].speed
             
-            # Get atmospheric properties
             altitude = r[i].altitude
             atm = self.std_atm.calculate(altitude)
-            rho = atm[3]  # density
+            rho = atm[3]
             
-            # Calculate drag force
             A = np.pi * rc.rocket_radius ** 2
             Cd = rc.drag_coefficient
             drag_force = 0.5 * rho * Cd * A * velocity * abs(velocity)
-            
-            # Drag loss = drag_force / mass * dt
             current_mass = rc.dry_weight + r[i].fuel_mass
             if current_mass > 0:
                 drag_loss += abs(drag_force) / current_mass * dt
@@ -124,7 +104,6 @@ class TrajectoryOptimizer:
         return drag_loss
     
     def generate_suggestions(self):
-        """Generate specific suggestions to reach target altitude"""
         self.suggestions = []
         
         if self.altitude_deficit <= 0:
@@ -136,49 +115,31 @@ class TrajectoryOptimizer:
             })
             return self.suggestions
         
-        # Get current component masses
         components = self.component_manager.get_component_data()
-        
-        # 1. Mass reduction analysis
         self._analyze_mass_reduction(components)
-        
-        # 2. Aerodynamic improvements
         self._analyze_aerodynamics()
-        
-        # 3. Propellant optimization
         self._analyze_propellant_optimization(components)
-        
-        # 4. Staging considerations
         self._analyze_staging_potential()
-        
-        # 5. Trajectory optimization
         self._analyze_trajectory_optimization()
         
-        # Sort suggestions by priority
         self.suggestions.sort(key=lambda x: x['priority'])
-        
         return self.suggestions
     
     def _analyze_mass_reduction(self, components):
         """Analyze potential mass reduction opportunities"""
         dry_mass = sum(comp['mass'] for name, comp in components.items() 
                       if 'propellant' not in name.lower())
-        
-        # Calculate altitude gain per kg of mass reduction
-        # Rough approximation: 1% mass reduction ≈ 1-2% altitude increase
-        mass_reduction_factor = 0.015  # 1.5% altitude gain per 1% mass reduction
-        
-        # Identify heavy components
+
+        mass_reduction_factor = 0.015
         heavy_components = [(name, data['mass']) for name, data in components.items() 
                           if data['mass'] > dry_mass * 0.05 and 'propellant' not in name.lower()]
         heavy_components.sort(key=lambda x: x[1], reverse=True)
         
         for comp_name, mass in heavy_components:
-            # Suggest realistic mass reduction (10-20%)
-            reduction_potential = mass * 0.15  # 15% reduction potential
+            reduction_potential = mass * 0.15
             altitude_gain = (reduction_potential / dry_mass) * mass_reduction_factor * self.max_altitude
             
-            if altitude_gain > 1000:  # Only suggest if significant gain
+            if altitude_gain > 1000:
                 self.suggestions.append({
                     'priority': 1,
                     'category': 'Mass Reduction',
@@ -187,9 +148,8 @@ class TrajectoryOptimizer:
                     'implementation': f'Consider: Composite materials, hollow structures, topology optimization'
                 })
         
-        # Overall structure optimization
-        if dry_mass > 50:  # Only for larger rockets
-            total_reduction = dry_mass * 0.1  # 10% total reduction goal
+        if dry_mass > 50:
+            total_reduction = dry_mass * 0.1
             altitude_gain = 0.1 * mass_reduction_factor * self.max_altitude
             
             self.suggestions.append({
@@ -201,12 +161,8 @@ class TrajectoryOptimizer:
             })
     
     def _analyze_aerodynamics(self):
-        """Analyze aerodynamic improvement opportunities"""
         max_q = self.analysis_results['max_q']
         drag_losses = self.analysis_results['drag_losses']
-        
-        # Estimate altitude gain from drag reduction
-        # 10% drag reduction ≈ 2-3% altitude increase
         drag_reduction_scenarios = [
             (0.05, "Polish surface finish, gap sealing"),
             (0.10, "Optimized nose cone shape (Von Karman or Haack series)"),
@@ -227,24 +183,16 @@ class TrajectoryOptimizer:
                 })
     
     def _analyze_propellant_optimization(self, components):
-        """Analyze propellant loading optimization"""
         propellant_mass = next((comp['mass'] for name, comp in components.items() 
                                if 'propellant' in name.lower()), 0)
         
-        # Check if adding more propellant would help
         current_mass_ratio = self.analysis_results['mass_ratio']
-        
-        # Estimate optimal mass ratio for altitude
-        # For sounding rockets, typical optimal mass ratio is 3-5
         optimal_mass_ratio = 4.0
         
         if current_mass_ratio < optimal_mass_ratio:
             additional_propellant = components.get('fuselage_oxi', {}).get('mass', 0) * 0.1  # 10% tank margin
             new_mass_ratio = (self.trajectory_data['constants'].dry_weight + propellant_mass + additional_propellant) / self.trajectory_data['constants'].dry_weight
-            
-            # Rough estimate: ln(mass_ratio) proportional to altitude
             altitude_gain = self.max_altitude * (np.log(new_mass_ratio) - np.log(current_mass_ratio)) / np.log(current_mass_ratio)
-            
             if altitude_gain > 1000:
                 self.suggestions.append({
                     'priority': 1,
@@ -255,9 +203,7 @@ class TrajectoryOptimizer:
                 })
     
     def _analyze_staging_potential(self):
-        """Analyze if staging could help reach target altitude"""
-        if self.altitude_deficit > 20000:  # Only suggest staging for large deficits
-            # Staging can provide 30-50% altitude increase
+        if self.altitude_deficit > 20000:
             staging_gain = self.max_altitude * 0.4
             
             self.suggestions.append({
@@ -269,13 +215,8 @@ class TrajectoryOptimizer:
             })
     
     def _analyze_trajectory_optimization(self):
-        """Analyze trajectory shape optimization"""
-        # Check if rocket is flying too vertical or too horizontal
         burnout_altitude = self.analysis_results['burnout_altitude']
         burnout_velocity = self.analysis_results['burnout_velocity']
-        
-        # Ideal burnout angle for max altitude is around 35-45 degrees
-        # Estimate current angle from velocity/altitude ratio
         avg_climb_rate = burnout_altitude / self.analysis_results['burnout_time']
         avg_horizontal_vel = np.sqrt(max(0, burnout_velocity**2 - avg_climb_rate**2))
         
@@ -287,7 +228,6 @@ class TrajectoryOptimizer:
         optimal_angle = 40  # degrees
         
         if abs(flight_angle - optimal_angle) > 10:
-            # Trajectory optimization can provide 5-15% altitude gain
             altitude_gain = self.max_altitude * 0.1
             
             self.suggestions.append({
@@ -299,14 +239,12 @@ class TrajectoryOptimizer:
             })
 
     def plot_analysis(self, show=True):
-        """Create comprehensive analysis plots with optional display control"""
         if not self.trajectory_data:
             print("No trajectory data available for plotting")
             return
         
         fig = plt.figure(figsize=(15, 10))
         
-        # 1. Altitude vs Time with target line
         ax1 = plt.subplot(2, 3, 1)
         altitudes = [state.altitude for state in self.trajectory_data['states']]
         times = self.trajectory_data['time']
@@ -319,7 +257,6 @@ class TrajectoryOptimizer:
         ax1.legend()
         ax1.grid(True)
         
-        # 2. Velocity vs Time
         ax2 = plt.subplot(2, 3, 2)
         velocities = [state.speed for state in self.trajectory_data['states']]
         ax2.plot(times, velocities, 'g-', linewidth=2)
@@ -331,13 +268,9 @@ class TrajectoryOptimizer:
         ax2.legend()
         ax2.grid(True)
         
-        # 3. Mass breakdown pie chart
         ax3 = plt.subplot(2, 3, 3)
         components = self.component_manager.get_component_data()
-        
-        # Group small components
         mass_threshold = sum(comp['mass'] for comp in components.values()) * 0.05
-        
         labels = []
         masses = []
         colors = []
@@ -357,7 +290,6 @@ class TrajectoryOptimizer:
             if data['mass'] > mass_threshold:
                 labels.append(name)
                 masses.append(data['mass'])
-                # Find color based on component type
                 color_found = False
                 for key, color in color_map.items():
                     if key in name.lower():
@@ -377,7 +309,6 @@ class TrajectoryOptimizer:
         ax3.pie(masses, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
         ax3.set_title('Mass Distribution')
         
-        # 4. Energy analysis
         ax4 = plt.subplot(2, 3, 4)
         kinetic_energy = [0.5 * (self.trajectory_data['constants'].dry_weight + state.fuel_mass) * state.speed**2 
                          for state in self.trajectory_data['states']]
@@ -393,18 +324,13 @@ class TrajectoryOptimizer:
         ax4.set_title('Energy Analysis')
         ax4.legend()
         ax4.grid(True)
-        
-        # 5. Altitude deficit visualization
         ax5 = plt.subplot(2, 3, 5)
         deficit_percent = (self.altitude_deficit / self.target_altitude) * 100
-        
-        # Create stacked bar chart
         achieved_percent = 100 - deficit_percent
         ax5.bar(['Current Design'], [achieved_percent], color='green', label='Achieved')
         ax5.bar(['Current Design'], [deficit_percent], bottom=[achieved_percent], 
                 color='red', label='Deficit')
         
-        # Add text annotations
         ax5.text(0, achieved_percent/2, f'{self.max_altitude/1000:.1f} km\n({achieved_percent:.1f}%)', 
                 ha='center', va='center', fontweight='bold')
         ax5.text(0, achieved_percent + deficit_percent/2, f'{self.altitude_deficit/1000:.1f} km\n({deficit_percent:.1f}%)', 
@@ -415,14 +341,11 @@ class TrajectoryOptimizer:
         ax5.set_ylim(0, 100)
         ax5.legend()
         
-        # 6. Suggestion impact summary
         ax6 = plt.subplot(2, 3, 6)
         ax6.axis('off')
-        
-        # Create text summary of top suggestions
         summary_text = "TOP OPTIMIZATION SUGGESTIONS:\n\n"
         
-        for i, suggestion in enumerate(self.suggestions[:5]):  # Top 5 suggestions
+        for i, suggestion in enumerate(self.suggestions[:5]):
             summary_text += f"{i+1}. {suggestion['category']}:\n"
             summary_text += f"   {suggestion['suggestion']}\n"
             summary_text += f"   Impact: {suggestion['impact']}\n\n"
@@ -438,7 +361,6 @@ class TrajectoryOptimizer:
         return fig
     
     def generate_report(self):
-        """Generate detailed text report"""
         report = []
         report.append("="*60)
         report.append("TRAJECTORY OPTIMIZATION ANALYSIS REPORT")
@@ -458,7 +380,6 @@ class TrajectoryOptimizer:
         report.append(f"Gravity Losses: {self.analysis_results['gravity_losses']:.0f} m/s")
         report.append(f"Drag Losses: {self.analysis_results['drag_losses']:.0f} m/s")
         
-        # Component mass summary
         report.append("\n" + "-"*40)
         report.append("MASS BREAKDOWN:")
         report.append("-"*40)
@@ -471,13 +392,9 @@ class TrajectoryOptimizer:
             report.append(f"{name:<20} {data['mass']:>8.2f} kg ({percentage:>5.1f}%)")
         
         report.append(f"{'TOTAL':<20} {total_mass:>8.2f} kg")
-        
-        # Optimization suggestions
         report.append("\n" + "="*60)
         report.append("OPTIMIZATION SUGGESTIONS:")
         report.append("="*60)
-        
-        # Group suggestions by category
         categories = {}
         for suggestion in self.suggestions:
             category = suggestion['category']
@@ -495,7 +412,6 @@ class TrajectoryOptimizer:
                 if 'implementation' in suggestion:
                     report.append(f"   Implementation: {suggestion['implementation']}")
         
-        # Summary
         report.append("\n" + "="*60)
         report.append("SUMMARY:")
         report.append("="*60)
@@ -503,7 +419,6 @@ class TrajectoryOptimizer:
         if self.altitude_deficit <= 0:
             report.append("✓ Target altitude achieved! No optimization required.")
         else:
-            # Estimate total potential gain
             total_gain = sum(float(s['impact'].split('→')[-1].split('km')[0].strip().replace('~', '')) 
                            for s in self.suggestions[:3] if '→' in s['impact'] and 'km' in s['impact'])
             

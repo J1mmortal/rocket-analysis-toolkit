@@ -67,19 +67,15 @@ class ComponentData:
     def add_calculated_fin_mass(self, fin_mass, fin_position, num_fins=4):
         self.calculated_fin_mass = fin_mass
         self.components["fins (calculated)"] = {
-            "mass": fin_mass * num_fins,  # Total mass of all fins
+            "mass": fin_mass * num_fins,
             "position": fin_position,
-            "team": "aero",  # Assuming fins are part of aero team
+            "team": "aero",
             "description": f"Calculated mass for {num_fins} fins"
         }
         
         print(f"Using calculated fin mass: {fin_mass * num_fins:.4f} kg (total for {num_fins} fins)")
     
     def create_team_template(self, team_name):
-        """
-        Create a template JSON file for a team to fill in based on new structure
-        """
-        # Define specific templates for each team
         if team_name == "aero":
             team_components = {
                 "nose cone": {
@@ -87,7 +83,6 @@ class ComponentData:
                     "position": 0.45,
                     "description": "nose cone"
                 }
-                # Note: Removed fins as they are calculated by fin sizer
             }
             filename = "aero_group.json"
         elif team_name == "fuselage":
@@ -127,7 +122,6 @@ class ComponentData:
             print(f"Unknown team: {team_name}")
             return None
         
-        # Save to file
         file_path = os.path.join(get_team_data_path(), filename)
         with open(file_path, 'w') as f:
             json.dump(team_components, f, indent=4)
@@ -136,38 +130,29 @@ class ComponentData:
         return file_path
     
     def create_all_templates(self):
-        """Create templates for all teams with new structure"""
-        teams = ["aero", "fuselage", "nozzle"] # Updated team names
+        teams = ["aero", "fuselage", "nozzle"]
         for team in teams:
             self.create_team_template(team)
     
     def get_component_data(self):
-        """Get the current component data for stability analysis"""
         return self.components
     
     def update_config(self):
-        """Update the config variables with current component data"""
-        # Reset default config values to zeros to ensure they don't influence results
-        # if not present in JSON files
         config.nose_cone_mass = 0
         config.fuselage_mass = 0
         config.nozzle_mass = 0
         config.engine_mass = 0  
         config.propellant_mass = 0
         config.recovery_system_mass = 0
-        
-        # Calculate fuselage mass (total of all components with 'fuselage' in name)
         fuselage_mass = 0
         fuselage_mass_position_product = 0
         
         for component, data in self.components.items():
             comp_name = component.lower()
             
-            # Handle fuselage components
             if "fuselage" in comp_name:
                 fuselage_mass += data["mass"]
                 fuselage_mass_position_product += data["mass"] * data["position"]
-            # Handle other specific components
             elif comp_name == "nose cone" or "nose" in comp_name:
                 config.nose_cone_mass = data["mass"]
                 config.nose_cone_cg_position = data["position"]
@@ -185,33 +170,24 @@ class ComponentData:
                 config.propellant_cg_position = data["position"]
                 print(f"Updated config: propellant_mass = {data['mass']} kg")
             elif "fin" in comp_name and "calculate" in comp_name:
-                # This is the calculated fin mass - display it but don't set a config value
-                # as it will be used directly from the fin calculations
                 pass
         
-        # Update fuselage mass and position if we have data
         if fuselage_mass > 0:
-            # Calculate average position weighted by mass
             avg_position = fuselage_mass_position_product / fuselage_mass if fuselage_mass > 0 else 0
-            
             config.fuselage_mass = fuselage_mass
             config.fuselage_cg_position = avg_position
             
             print(f"Updated config: fuselage_mass = {fuselage_mass} kg")
         
-        # Calculate and update total dry weight
         dry_weight = 0
         for component, data in self.components.items():
-            if "propellant" not in component.lower():  # Skip propellant for dry weight
+            if "propellant" not in component.lower():
                 dry_weight += data["mass"]
         
-        # Update dry weight with sum of all components
         config.dry_weight = dry_weight
         print(f"Updated config: dry_weight = {dry_weight} kg (sum of all non-propellant components)")
         
     def print_component_summary(self):
-        """Print a summary of all components and their properties"""
-        # If we haven't loaded data, try loading it first
         if not self.has_loaded_data or not self.components:
             self.update_from_team_files()
         
@@ -219,11 +195,9 @@ class ComponentData:
         print(f"{'Component':<20} {'Mass (kg)':<10} {'Position (m)':<15} {'Team':<15}")
         print('-' * 60)
         
-        # Track total mass
         total_dry_mass = 0
         propellant_mass = 0
         
-        # Sort components for better display - put propellant first, calculated fins last
         def sort_key(item):
             name = item[0].lower()
             if "propellant" in name:
@@ -243,7 +217,6 @@ class ComponentData:
             
             print(f"{name:<20} {data['mass']:<10.3f} {data['position']:<15.3f} {data.get('team', 'N/A'):<15}")
         
-        # Calculate total mass
         total_mass = total_dry_mass + propellant_mass
         
         print('-' * 60)

@@ -142,7 +142,6 @@ class ThermalAnalysis:
         else:
             Re = 1000
         
-        # Recovery factor (pre-calculated for common conditions)
         if Re < 5e5:  # Laminar
             r = self._Pr**(1/3)
         else:  # Turbulent
@@ -157,11 +156,10 @@ class ThermalAnalysis:
         T_recovery = air_temp + r * (T_stagnation - air_temp)
         
         if mach > 0.1 and velocity > 10:
-            R_nose = 0.1  # Effective nose radius
+            R_nose = 0.1
             rho_inf = air_density
             V_inf = velocity
             
-            # Simplified Fay-Riddell for stagnation point
             h_stag_FR = 0.94 * np.sqrt(rho_inf * V_inf / R_nose) * self._cp * (T_recovery - air_temp) / V_inf
             
             if Re > 0:
@@ -188,7 +186,6 @@ class ThermalAnalysis:
         else:
             h_avg = 50
         
-        # Ensure reasonable bounds
         h_avg = np.clip(h_avg, 50, 10000)
         
         result = {
@@ -245,23 +242,17 @@ class ThermalAnalysis:
             temp_factor = 0.6 * np.exp(-1 * x_norm) + 0.4
         
         h_local = h_avg * temp_factor
-        
         q_conv = h_local * (T_recovery - T_current)
         q_rad = mat_props['emissivity'] * self._sigma * (T_current**4 - air_temp**4)
         q_net = q_conv - q_rad
-        
         dT_dt = q_net / (mat_props['rho'] * mat_props['cp'] * thickness_m)
-        
         max_dT = 100 * dt
         dT = np.clip(dT_dt * dt, -max_dT, max_dT)
         
         new_temperature = T_current + dT
-        
         new_temperature = np.where(self.fin_mask, air_temp, new_temperature)
         new_temperature = np.clip(new_temperature, air_temp - 50, T_recovery + 50)
-        
         self.current_temperature = new_temperature
-        
         valid_points = ~self.fin_mask
         if np.any(valid_points):
             current_max = np.max(new_temperature[valid_points])

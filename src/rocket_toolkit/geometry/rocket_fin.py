@@ -332,7 +332,6 @@ class RocketFin:
                         print(f"Converged after {i+1} iterations")
                     break
             
-            # Update values
             self.fin_height = H
             self.fin_width = W
             current_radial_fin_length = new_radial_fin_length
@@ -340,12 +339,9 @@ class RocketFin:
             if verbose:
                 print("Warning: Iteration did not converge after maximum iterations.")
         
-        # Final calculations
         self.fin_mass = self.calculate_fin_mass()
         self.radial_fin_length = current_radial_fin_length
         self.fin_area = A
-        
-        # Cache the results
         self.material_dimensions[self.material_name] = {
             "area": self.fin_area,
             "height": self.fin_height,
@@ -383,10 +379,8 @@ class RocketFin:
         
         results = []
         
-        # Pre-load mass data once
-        _ = self.masses()  # This will cache the mass calculation
+        _ = self.masses()
         
-        # Calculate dimensions for each material
         for i, material in enumerate(materials):
             material_start = time.time()
             if verbose:
@@ -411,7 +405,6 @@ class RocketFin:
             if verbose:
                 print(f"  Completed in {time.time() - material_start:.3f}s")
         
-        # Restore original material
         self.set_material(current_material)
         self.all_materials_data = pd.DataFrame(results)
         
@@ -419,28 +412,22 @@ class RocketFin:
             print(f"\nAll materials calculated in {time.time() - start_time:.3f} seconds")
             print("\nSummary of fin dimensions for all materials:")
             print(self.all_materials_data[["Material", "Height (mm)", "Width (mm)", "Total mass (kg)"]])
-        
         return self.all_materials_data
     
     def get_material_specific_dimensions(self, material_name):
-        """Get dimensions for specific material with caching"""
         if material_name not in self.material_dimensions:
             current_material = self.material_name
             self.set_material(material_name)
             self.calculate_fin_dimensions(verbose=False)
             self.set_material(current_material)
-        
         return self.material_dimensions[material_name]
     
     def get_all_material_dimensions(self):
-        """Get all material dimensions (calculate if needed)"""
         if self.all_materials_data is None:
             self.calculate_all_material_dimensions()
-        
         return self.all_materials_data
     
     def clear_caches(self):
-        """Clear all caches to free memory"""
         self._masses_cache = None
         self._component_data_cache = None
         self.material_dimensions.clear()
