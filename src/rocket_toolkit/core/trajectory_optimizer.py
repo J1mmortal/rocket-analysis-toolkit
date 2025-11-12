@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from rocket_toolkit import config
-from rocket_toolkit.geometry.component_manager import ComponentData
-from rocket_toolkit.geometry.rocket_fin import RocketFin
+from src.rocket_toolkit import config
+from src.rocket_toolkit.geometry.component_manager import ComponentData
+from src.rocket_toolkit.geometry.rocket_fin import RocketFin
 import isacalc as isa
 
 class TrajectoryOptimizer:

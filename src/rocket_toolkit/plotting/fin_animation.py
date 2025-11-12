@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.colors import LinearSegmentedColormap
 import os
-from rocket_toolkit import config
+from src.rocket_toolkit import config
 
 def create_fin_temperature_animation(fin_tracker, output_path="fin_animation.mp4"):
     if not fin_tracker or not fin_tracker.time_points:

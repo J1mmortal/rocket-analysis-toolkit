@@ -1,6 +1,6 @@
 import json
 import os
-from rocket_toolkit import config
+from src.rocket_toolkit import config
 
 def get_team_data_path():
     current_dir = os.path.dirname(os.path.abspath(__file__))

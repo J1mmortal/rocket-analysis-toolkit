@@ -1,7 +1,7 @@
 import numpy as np
-from rocket_toolkit.models.atmosphere_model import AtmosphereModel
-from rocket_toolkit.core.thermal_data import FinTemperatureTracker
-from rocket_toolkit import config
+from src.rocket_toolkit.models.atmosphere_model import AtmosphereModel
+#from src.rocket_toolkit.core.thermal_data import FinTemperatureTracker
+from src.rocket_toolkit import config
 import time
 
 class ThermalAnalysis:

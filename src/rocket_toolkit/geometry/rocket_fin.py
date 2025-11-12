@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import json
-from rocket_toolkit.geometry.materials import MaterialsDatabase
-from rocket_toolkit import config
+from src.rocket_toolkit.geometry.materials import MaterialsDatabase
+from src.rocket_toolkit import config
 import time
 
 def get_team_data_path():

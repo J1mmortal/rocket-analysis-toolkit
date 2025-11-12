@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.path import Path
-from rocket_toolkit import config
-from rocket_toolkit.geometry.component_manager import ComponentData
+from src.rocket_toolkit import config
+from src.rocket_toolkit.geometry.component_manager import ComponentData
 
 
 class RocketStability:
