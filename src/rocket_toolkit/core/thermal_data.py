@@ -19,7 +19,6 @@ class Visualization:
         self.altitude = self.fin.altitude
     
     def plot_temperature_profile(self, nx=mesh_size, ny=mesh_size, return_fig=False):
-        """Plot temperature profile with option to return figure instead of showing"""
         X, Y, temperature, heat_info = self.thermal_analyzer.calculate_temperature_profile(nx, ny)
         
         air_temp = heat_info["air_temp"]
@@ -88,7 +87,6 @@ class Visualization:
         cbar2 = fig2.colorbar(contour, ax=ax2)
         cbar2.set_label('Temperature (K)')
         
-        # Draw fin outline
         leading_edge_x_vals = []
         y_vals = np.linspace(0, height_m, 50)
         for y_val in y_vals:
@@ -127,7 +125,7 @@ class Visualization:
         
         plt.subplots_adjust(bottom=0.30)
         
-        info_text = f'Flight Conditions:\n'
+        info_text = 'Flight Conditions:\n'
         info_text += f'  Velocity: {self.velocity} m/s\n'
         info_text += f'  Altitude: {self.altitude} m\n'
         info_text += f'  Mach: {heat_info["mach"]:.2f}\n'
@@ -149,7 +147,6 @@ class Visualization:
             return fig, fig2
     
     def compare_materials(self, velocities=None, altitudes=None, use_cached=True, fast_mode=True, return_data=False):
-        """Compare materials with option to return data instead of showing plots"""
         if velocities is None:
             velocities = [self.velocity]
         if altitudes is None:
@@ -237,7 +234,6 @@ class Visualization:
             return self.plot_material_comparison(velocities, altitudes, df_sorted)
     
     def plot_material_comparison(self, velocities=None, altitudes=None, df=None, return_fig=False):
-        """Plot material comparison with option to return figures instead of showing"""
         if df is None:
             df = self.compare_materials(velocities, altitudes)
         
@@ -262,20 +258,16 @@ class Visualization:
             ax1.set_xlabel("Material")
             ax1.set_ylabel("Temperature (K)")
             ax2_twin.set_ylabel("Mass (kg)")
-            ax1.set_title(f"Temperature Comparison by Material (Enhanced Accuracy)")
-            
+            ax1.set_title("Temperature Comparison by Material (Enhanced Accuracy)")
             ax1.set_xticks(positions)
             ax1.set_xticklabels(materials, rotation=45, ha='right')
-            
             ax1.legend(loc='upper left')
             ax2_twin.legend(loc='upper right')
             
-            # Add ambient temperature reference
             ambient_temp = 288.15
             ax1.axhline(y=ambient_temp, color='blue', linestyle=':', alpha=0.5,
                        label=f"Ambient Temp ({ambient_temp}K)")
             
-            # Plot 2: Mass comparison with temperature safety rating
             results_mass = sorted(df.to_dict('records'), key=lambda x: x["Mass (kg)"])
             materials_by_mass = [r["Material"] for r in results_mass]
             masses_sorted = np.array([r["Mass (kg)"] for r in results_mass])
@@ -285,7 +277,6 @@ class Visualization:
             positions2 = np.arange(len(materials_by_mass))
             mass_bars = ax2.bar(positions2, masses_sorted, label="Total Fins Mass (kg)")
             
-            # Color code bars based on temperature margin
             colors = []
             for margin, limit_ok in zip(temp_margins_mass, within_limits):
                 if not limit_ok:
@@ -297,18 +288,15 @@ class Visualization:
                 else:
                     colors.append('green')
             
-            # Apply colors
             for bar, color, limit_ok in zip(mass_bars, colors, within_limits):
                 bar.set_color(color)
                 if not limit_ok:
                     bar.set_hatch('///')
             
-            # Add mass annotations
             for i, mass in enumerate(masses_sorted):
                 ax2.annotate(f"{mass:.4f}kg", xy=(i, mass + 0.01),
                            ha='center', va='bottom', fontsize=8)
             
-            # Set labels and formatting
             ax2.set_xlabel("Material")
             ax2.set_ylabel("Mass (kg)")
             ax2.set_title("Mass Comparison by Material (With Temperature Safety Rating)")
@@ -316,7 +304,6 @@ class Visualization:
             ax2.set_xticklabels(materials_by_mass, rotation=45, ha='right')
             ax2.grid(True, linestyle='--', alpha=0.7)
             
-            # Add color coding legend
             import matplotlib.patches as mpatches
             legend_elements = [
                 mpatches.Patch(color='red', hatch='///', label='Exceeds Temperature Limit'),
@@ -335,7 +322,6 @@ class Visualization:
                 return fig
 
 def main():
-    """Main function - now only shows plots interactively, doesn't save files"""
     fin = RocketFin()
 
     print("Available materials:")

@@ -761,10 +761,9 @@ def run_single_material_analysis(material_name=None, fast_mode=True, show_plots=
                 print(f"Removed existing animation file: {output_path}")
             except Exception as e:
                 print(f"Warning: Could not remove existing file: {e}")
-                # Try a different filename to avoid conflicts
                 output_path = os.path.join(output_dir, f"fin_temp_{material_name.replace(' ', '_')}_{int(time.time())}.mp4")
         
-        animation_tracker = flight_simulator.fin_tracker  # Use the tracker that has all the flight data
+        animation_tracker = flight_simulator.fin_tracker
         if animation_tracker and len(animation_tracker.time_points) > 0:
             print(f"\nCreating temperature animation for {material_name} fins...")
             
@@ -812,10 +811,7 @@ def run_material_comparison(fast_mode=True, show_plots=None):
     """
     comparison_start = time.time()
     
-    # Determine plot display setting
     display_plots = config.show_plots if show_plots is None else show_plots
-    
-    # Load team data first - ensures consistent masses across all components
     component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
     
@@ -823,11 +819,8 @@ def run_material_comparison(fast_mode=True, show_plots=None):
     if not display_plots:
         print("(Plot display disabled - results will be saved to PDF only)")
     results = material_comparison_example.compare_fin_materials_for_flight(fast_mode=fast_mode)
-    
-    # Sort results for display
     results.sort(key=lambda x: (not x["Within Limits"], x["Mass (kg)"]))
     
-    # Print results table
     print("\nMaterial Comparison Results (with improved accuracy):")
     print(f"{'Material':<33} {'Max Temp (K)':<12} {'Temp Margin (K)':<15} {'Mass (kg)':<10} {'Within Limits':<15}")
     print("-" * 85)
@@ -835,12 +828,10 @@ def run_material_comparison(fast_mode=True, show_plots=None):
     for result in results:
         print(f"{result['Material']:<33} {result['Max Temperature (K)']:<12.3f} {result['Temperature Margin (K)']:<15.1f} {result['Mass (kg)']:<10.5f} {result['Within Limits']}")
     
-    # Create PDF output
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    # Generate PDF filename
     mode_suffix = "fast" if fast_mode else "detailed"
     pdf_filename = f"MC_{mode_suffix}.pdf"
     pdf_path = os.path.join(output_dir, pdf_filename)
@@ -851,64 +842,45 @@ def run_material_comparison(fast_mode=True, show_plots=None):
     pdf_time = time.time() - pdf_start
     print(f"PDF report generated in {pdf_time:.3f} seconds")
     
-    # Find the best material
     best_material = next((r["Material"] for r in results if r["Within Limits"]), None)
     if best_material:
         print(f"\nRecommended material: {best_material}")
-        
-        # Ask if user wants to run detailed analysis for the best material
         if not fast_mode:
             user_input = input("\nRun detailed analysis for the recommended material? (y/n): ")
             if user_input.lower() == 'y':
                 run_single_material_analysis(best_material, fast_mode=False, show_plots=display_plots)
     else:
         print("\nWarning: No material can withstand the thermal conditions of this flight profile.")
-        
-        # Find material with smallest temperature exceedance
         results.sort(key=lambda x: -x["Temperature Margin (K)"])
         least_bad_material = results[0]["Material"]
         print(f"Least problematic material: {least_bad_material}")
-        
-        # Ask if user wants to run detailed analysis
         if not fast_mode:
             user_input = input("\nRun detailed analysis for this material? (y/n): ")
             if user_input.lower() == 'y':
                 run_single_material_analysis(least_bad_material, fast_mode=False, show_plots=display_plots)
-    
-    # Clear caches
+
     flight_simulator.clear_simulation_caches()
-    
     comparison_time = time.time() - comparison_start
     print(f"Material comparison completed in {comparison_time:.3f} seconds")
 
 def run_stability_analysis(flight_stage=None, show_plots=None):
     """
-    Run stability analysis at different flight stages (optimized)
-    
     Args:
         flight_stage: Specific flight stage to analyze (launch, burnout, apogee, etc.)
                      If None, analyze all stages
         show_plots: Override config setting for plot display (None uses config default)
     """
     stability_start = time.time()
-    
-    # Determine plot display setting
     display_plots = config.show_plots if show_plots is None else show_plots
-    
-    # Load team data first
     component_manager = load_team_data()
     
-    # Initialize rocket fin
     fin_init_start = time.time()
     fin = RocketFin()
     fin.calculate_fin_dimensions(verbose=False)
     fin_init_time = time.time() - fin_init_start
     
-    # Create stability analyzer
     stability = RocketStability()
     stability.set_fin_properties(fin)
-    
-    # Print current component data summary
     component_manager.print_component_summary()
     
     if not display_plots:
@@ -919,7 +891,6 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         os.makedirs(output_dir)
     
     if flight_stage is None or flight_stage == "all":
-        # If no specific stage, run full simulation to get flight data
         print("\nRunning full flight simulation to get trajectory data...")
         sim_start = time.time()
         tracker = FinTemperatureTracker(fin)
@@ -928,14 +899,11 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         flight_simulator.main(skip_plots=True, material_name=config.fin_material, fast_mode=True, skip_animation=True)
         sim_time = time.time() - sim_start
         print(f"Flight simulation completed in {sim_time:.3f} seconds")
-        
-        # Now generate the stability plots throughout flight
         print("\nGenerating stability diagrams throughout flight...")
         plot_start = time.time()
         fig = flight_simulator.plot_stability_during_flight()
         plot_time = time.time() - plot_start
         
-        # Save as PDF with initial conditions
         pdf_filename = "SA_all_stages.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
@@ -943,7 +911,6 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         pdf_start = time.time()
         with PdfPages(pdf_path) as pdf:
             pdf.savefig(fig)
-            # Add initial conditions pages (can be multiple)
             fig_conditions_list = create_initial_conditions_page(
                 "stability", 
                 flight_stage="all",
@@ -958,41 +925,33 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         print(f"PDF report generated in {pdf_time:.3f} seconds")
         print(f"Plotting completed in {plot_time:.3f} seconds")
     else:
-        # Analyze specific flight stage
         print(f"\nAnalyzing stability at flight stage: {flight_stage}")
         
-        # Get propellant mass from component data
         propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config.propellant_mass)
         
         if flight_stage.lower() == "launch":
-            # Launch conditions
             stability.set_flight_conditions(mach=0.1)
-            stability.set_propellant_mass(propellant_mass)  # Full propellant
+            stability.set_propellant_mass(propellant_mass)
         elif flight_stage.lower() == "burnout":
-            # Burnout conditions - estimate Mach number
             stability.set_flight_conditions(mach=2.0)
-            stability.set_propellant_mass(0)  # Empty propellant
+            stability.set_propellant_mass(0)
         elif flight_stage.lower() == "apogee":
-            # Apogee conditions
             stability.set_flight_conditions(mach=0.5)
-            stability.set_propellant_mass(0)  # Empty propellant
+            stability.set_propellant_mass(0)
         elif flight_stage.lower() == "landing":
-            # Landing conditions
             stability.set_flight_conditions(mach=0.2)
-            stability.set_propellant_mass(0)  # Empty propellant
+            stability.set_propellant_mass(0)
         else:
             print(f"Unknown flight stage: {flight_stage}")
             print("Available stages: launch, burnout, apogee, landing")
             return
         
-        # Calculate stability
         calc_start = time.time()
         stability.calculate_center_of_mass()
         stability.calculate_center_of_pressure()
         stability.calculate_stability()
         calc_time = time.time() - calc_start
         
-        # Print stability results
         print("\nStability Analysis Results:")
         print(f"Center of Mass position: {stability.center_of_mass:.3f} m from nose tip")
         print(f"Center of Pressure position: {stability.center_of_pressure:.3f} m from nose tip")
@@ -1001,12 +960,10 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         print(f"Stability status: {stability.get_stability_status()}")
         print(f"Calculation completed in {calc_time:.4f} seconds")
         
-        # Plot stability diagram
         plot_start = time.time()
         fig, ax = stability.plot_stability_diagram(show_components=True)
         plot_time = time.time() - plot_start
         
-        # Save as PDF with initial conditions
         pdf_filename = f"SA_{flight_stage}.pdf"
         pdf_path = os.path.join(output_dir, pdf_filename)
         
@@ -1014,7 +971,6 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         pdf_start = time.time()
         with PdfPages(pdf_path) as pdf:
             pdf.savefig(fig)
-            # Add initial conditions pages (can be multiple)
             fig_conditions_list = create_initial_conditions_page(
                 "stability", 
                 flight_stage=flight_stage,
@@ -1032,16 +988,12 @@ def run_stability_analysis(flight_stage=None, show_plots=None):
         if display_plots:
             plt.show()
     
-    # Clear caches
     flight_simulator.clear_simulation_caches()
     
     stability_time = time.time() - stability_start
     print(f"Stability analysis completed in {stability_time:.3f} seconds")
 
 def manage_team_data():
-    """
-    Manage component data from different teams (optimized)
-    """
     management_start = time.time()
     component_manager = ComponentData()
     
@@ -1080,61 +1032,44 @@ def manage_team_data():
 
 def run_trajectory_optimization(show_plots=None):
     """
-    Run trajectory analysis and provide optimization suggestions for reaching 100km (optimized)
-    
     Args:
         show_plots: Override config setting for plot display (None uses config default)
     """
     optimization_start = time.time()
     
-    # Determine plot display setting
     display_plots = config.show_plots if show_plots is None else show_plots
     
     print("\nRunning trajectory optimization analysis...")
     if not display_plots:
         print("(Plot display disabled - results will be saved to PDF only)")
     
-    # Load team data first
     component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
-    
-    # Run simulation to get trajectory data
     print("Simulating current configuration...")
-    
-    # Initialize and run the simulation
     sim_start = time.time()
     used_material = flight_simulator.init(material_name=config.fin_material, fast_mode=True)
     limit_reached = flight_simulator.run_simulation()
     sim_time = time.time() - sim_start
     print(f"Simulation completed in {sim_time:.3f} seconds")
     
-    # Create optimizer and analyze
     analysis_start = time.time()
-    optimizer = TrajectoryOptimizer(target_altitude=100000)  # 100 km target
+    optimizer = TrajectoryOptimizer(target_altitude=100000)
     
-    # Analyze the trajectory
     results = optimizer.analyze_trajectory(flight_simulator.r, flight_simulator.rc, flight_simulator.time_points)
-    
-    # Generate optimization suggestions
     suggestions = optimizer.generate_suggestions()
     analysis_time = time.time() - analysis_start
     print(f"Analysis completed in {analysis_time:.3f} seconds")
-    
-    # Print the report
     print("\n" + optimizer.generate_report())
     
-    # Create visualizations
     print("\nGenerating analysis plots...")
     plot_start = time.time()
     fig = optimizer.plot_analysis(show=display_plots)
     plot_time = time.time() - plot_start
     
-    # Save as PDF with initial conditions
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-    # Save the figure as PDF
     save_start = time.time()
     pdf_filename = "TO_analysis.pdf"
     pdf_path = os.path.join(output_dir, pdf_filename)
@@ -1142,7 +1077,6 @@ def run_trajectory_optimization(show_plots=None):
     print(f"Generating trajectory optimization PDF: {pdf_filename}")
     with PdfPages(pdf_path) as pdf:
         pdf.savefig(fig)
-        # Add initial conditions pages (can be multiple)
         fig_conditions_list = create_initial_conditions_page(
             "trajectory", 
             target_altitude=100000,
@@ -1156,11 +1090,9 @@ def run_trajectory_optimization(show_plots=None):
     print(f"PDF report generated in {save_time:.3f} seconds")
     print(f"Plotting completed in {plot_time:.3f} seconds")
     
-    # Show plots if enabled
     if display_plots:
         plt.show()
     
-    # Ask if user wants to see specific optimization details
     if suggestions and optimizer.altitude_deficit > 0:
         print("\nWould you like to explore specific optimization scenarios?")
         print("1. Mass reduction details")
@@ -1171,7 +1103,6 @@ def run_trajectory_optimization(show_plots=None):
         choice = input("\nEnter choice (1-4): ")
         
         if choice in ['1', '2', '3']:
-            # Filter suggestions by category
             category_map = {
                 '1': 'Mass Reduction',
                 '2': 'Aerodynamics', 
@@ -1192,22 +1123,13 @@ def run_trajectory_optimization(show_plots=None):
             else:
                 print(f"\nNo specific suggestions available for {category}")
     
-    # Clear caches
     flight_simulator.clear_simulation_caches()
-    
     optimization_time = time.time() - optimization_start
     print(f"Trajectory optimization completed in {optimization_time:.3f} seconds")
 
 def main_menu(show_plots=None):
-    """
-    Display interactive menu for analysis options (optimized)
-    
-    Args:
-        show_plots: Override config setting for plot display (None uses config default)
-    """
     menu_start = time.time()
     
-    # Determine plot display setting
     display_plots = config.show_plots if show_plots is None else show_plots
     
     while True:
@@ -1229,7 +1151,6 @@ def main_menu(show_plots=None):
         if choice == '1':
             run_single_material_analysis(fast_mode=False, show_plots=display_plots)
         elif choice == '2':
-            # Get available materials
             material_start = time.time()
             fin = RocketFin()
             materials = fin.get_available_materials()
@@ -1312,7 +1233,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     
-    # Determine plot display setting
     if args.show_plots:
         show_plots_override = True
         print("Plot display enabled via command line")
