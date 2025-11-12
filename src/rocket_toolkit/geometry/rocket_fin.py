@@ -16,26 +16,18 @@ def get_team_data_path():
 
 class RocketFin:
     def __init__(self):
-        # Flight statistics
         self.delta_v = 1400  # m/s required
         self.isp = 235  # sec
         self.m_payload = 1.3  # kg
         self.g0 = 9.81  # m/s^2
-        
-        # ALWAYS use this fixed value for max_q to ensure consistency across all code paths
         self.max_q = 82800.0  # Pascals
-        
-        # Set config.max_q to match if it exists (ensures consistency)
         if hasattr(config, 'max_q'):
             config.max_q = self.max_q
-            
         self.dt = 0.2  # sec of maneuver to get rotational velocity
         self.min_rad = 1  # rad/s
         self.max_rad = 5  # rad/s
         self.tol = 1e-7
         self.max_iter = 100
-        
-        # Geometry
         self.radius_fuselage = 0.25  # m
         self.radial_fin_length = 0.05  # m
         self.wall_thickness = 4  # mm
@@ -45,44 +37,26 @@ class RocketFin:
         self.fin_angle_rad = np.radians(self.fin_angle)
         self.finconflict_value = 0.69
         self.num_fins = 4
-        
-        # Legacy masses (kept for backward compatibility but not used in new calculations)
         self.m1 = 2  # kg
         self.m1_marge = 0.2
         self.m2 = 4  # kg
         self.m2_marge = 0.2
         self.m3 = 3  # kg
         self.m3_marge = 0.2
-        
-        # Flight conditions for fin temp calculation
         self.ambient_temp = 288.15  # K
         self.velocity = None  # m/s
         self.altitude = None  # m
-        
-        # Calculated values
         self.fin_area = None
         self.fin_height = None
         self.fin_width = None
         self.fin_mass = None
-        
-        # Initialize materials database
         self.materials_db = MaterialsDatabase()
-        
-        # Material-specific dimensions dictionary (PERFORMANCE CRITICAL CACHE)
         self.material_dimensions = {}
-        
-        # Default material properties
         self.set_material("Aluminum 6061-T6")
-        
-        # Store all material calculations (CACHE)
         self.all_materials_data = None
-        
-        # Cache for optimization (PERFORMANCE CRITICAL)
         self._masses_cache = None
         self._component_data_cache = None
         self._component_data_timestamp = 0
-        
-        # Pre-calculated constants for performance
         self._geom_ratio = np.tan(self.fin_angle_rad)
         self._cl = 2 * np.pi * self.aoa_rad
     
@@ -99,7 +73,6 @@ class RocketFin:
             self.thermal_expansion = material["thermal_expansion"]
             self.emissivity = material["emissivity"]
             
-            # Update current fin dimensions from stored values if available
             if material_name in self.material_dimensions:
                 dims = self.material_dimensions[material_name]
                 self.fin_area = dims["area"]
@@ -117,15 +90,12 @@ class RocketFin:
     def load_component_data(self):
         current_time = time.time()
         
-        # Check if cache is still valid (cache for 1 second to avoid repeated file I/O)
         if (self._component_data_cache is not None and 
             current_time - self._component_data_timestamp < 1.0):
             return self._component_data_cache
         
         components = {}
         total_mass = 0
-        
-        # Define files to check
         team_data_path = get_team_data_path()
         file_paths = [
             os.path.join(team_data_path, "aero_group.json"),
@@ -139,7 +109,6 @@ class RocketFin:
                     with open(file_path, 'r') as f:
                         team_data = json.load(f)
                     
-                    # Add each component's mass to the total
                     for component_name, component_data in team_data.items():
                         if "mass" in component_data:
                             mass = component_data["mass"]
@@ -151,14 +120,12 @@ class RocketFin:
                 except Exception as e:
                     print(f"Error loading {file_path}: {e}")
         
-        # Cache the result
         self._component_data_cache = (components, total_mass)
         self._component_data_timestamp = current_time
         
         return components, total_mass
     
     def masses(self):
-        # Return cached value if available
         if self._masses_cache is not None:
             return self._masses_cache
         
@@ -167,7 +134,6 @@ class RocketFin:
         if components and total_mass > 0:
             total_mass += self.m_payload
             
-            # Calculate masses once
             dry_mass = 0
             propellant_mass = 0
             for name, data in components.items():
@@ -179,7 +145,6 @@ class RocketFin:
             self._masses_cache = dry_mass + self.m_payload + propellant_mass
             return self._masses_cache
         
-        # Fallback calculation (cached)
         fuel_frac = (np.exp(self.delta_v / (self.isp * self.g0)) - 1) * 100
         m_empty_min = self.m1 * (1 - self.m1_marge) + self.m2 * (1 - self.m2_marge) + self.m3 * (1 - self.m3_marge) + self.m_payload
         m_empty_max = self.m1 * (1 + self.m1_marge) + self.m2 * (1 + self.m2_marge) + self.m3 * (1 + self.m3_marge) + self.m_payload
@@ -196,15 +161,12 @@ class RocketFin:
         if height_mm is None or width_mm is None:
             return None
             
-        # Convert to meters (optimized)
         height_m = height_mm * 0.001
         width_m = width_mm * 0.001
         thickness_m = self.wall_thickness * 0.001
         
-        # Volume calculation (triangular fin)
         volume = 0.5 * width_m * height_m * thickness_m
         
-        # Get density
         if material:
             material_props = self.materials_db.get_material_properties(material)
             density = material_props["density"]
@@ -225,11 +187,9 @@ class RocketFin:
         if mass is None:
             return 0
             
-        # Convert to meters
         height_m = height_mm * 0.001
         width_m = width_mm * 0.001
         
-        # Parallel axis theorem (optimized)
         cm_distance_from_center = self.radius_fuselage + width_m/3
         I_cm = (mass/18) * (width_m**2 + height_m**2)
         I_fin = I_cm + mass * cm_distance_from_center**2
@@ -239,7 +199,6 @@ class RocketFin:
     def calculate_fin_dimensions(self, verbose=False):
         start_time = time.time()
         
-        # Check if already calculated for this material
         if self.material_name in self.material_dimensions:
             cached_dims = self.material_dimensions[self.material_name]
             self.fin_area = cached_dims["area"]
@@ -259,7 +218,6 @@ class RocketFin:
             
             return self.fin_area, self.fin_height, self.fin_width, self.fin_mass
         
-        # Get mass (cached)
         m_empty = self.masses()
         
         if verbose:
@@ -280,19 +238,15 @@ class RocketFin:
                 print(f"No team data found. Using legacy mass calculation: {m_empty:.3f} kg")
             print(f"Using dynamic pressure (max_q) for calculations: {self.max_q:.1f} Pa")
         
-        # Initialize variables
         self.fin_height = None
         self.fin_width = None
         current_radial_fin_length = self.radial_fin_length
         
-        # Pre-calculate body moment of inertia (constant)
         I_body = 0.5 * m_empty * self.radius_fuselage**2
         
-        # Optimized iteration loop
         for i in range(self.max_iter):
             r_fin = self.radius_fuselage + current_radial_fin_length
             
-            # Calculate total MMOI
             if self.fin_height is not None and self.fin_width is not None:
                 fin_mass = self.calculate_fin_mass()
                 I_single_fin = self.calculate_fin_mmoi()
@@ -301,7 +255,6 @@ class RocketFin:
             else:
                 I_total = I_body
             
-            # Force calculations (vectorized where possible)
             angular_accelerations = np.array([self.min_rad, self.max_rad])
             forces = (I_total * angular_accelerations) / (r_fin * self.dt)
             min_F, max_F = forces
@@ -309,17 +262,13 @@ class RocketFin:
             if verbose and i % 5 == 0:
                 print(f"Iteration {i+1}: Min and max Force: {min_F:.3f} N, {max_F:.3f} N")
             
-            # Average force and area calculation
-            avg_F = (min_F + max_F) * 0.5  # Slightly faster than division
-            A = avg_F / (self.max_q * self._cl)  # Use pre-calculated CL
+            avg_F = (min_F + max_F) * 0.5
+            A = avg_F / (self.max_q * self._cl) 
             
-            # Geometric calculations (optimized)
-            H = np.sqrt((2 * A) / self._geom_ratio) * 1000  # mm, use pre-calculated ratio
+            H = np.sqrt((2 * A) / self._geom_ratio) * 1000
             W = H * self._geom_ratio  # mm
+            new_radial_fin_length = W * 0.0005
             
-            new_radial_fin_length = W * 0.0005  # m, optimized multiplication
-            
-            # Convergence check
             if self.fin_height is not None:
                 height_diff = abs(H - self.fin_height)
                 width_diff = abs(W - self.fin_width)
