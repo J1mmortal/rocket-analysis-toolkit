@@ -63,7 +63,6 @@ class RocketFin:
         self._cl = 2 * np.pi * self.aoa_rad
     
     def set_material(self, material_name):
-        print("test1")
         if not material_name:
             return False
     

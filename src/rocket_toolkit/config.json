@@ -63,7 +63,6 @@
     "show_rocket_configuration": "2D"
   },
   "materials": {
-    "fin_material": "Titanium Ti-6Al-4V",
     "Aluminum 6061-T6": {
         "thermal_conductivity": 167,
         "density": 2700,
