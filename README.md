@@ -9,37 +9,36 @@ This toolkit provides comprehensive analysis capabilities for rocket design, inc
 4. **Material Comparison** - Compare different fin materials for weight and thermal performance
 5. **Trajectory Optimization** - Analyze trajectory and provide optimization suggestions for reaching target altitude
 6. **Manage Team Data** - Load, check and modify the mass and location data of the components
-7. **Plot Display Control** - Toggle between PDF-only output and interactive plot display
-
+7. **Customisable Settings** - Change the settings in a way that fits your rocket by either changing the team data or use presets for exisiting rockets
 ## Quick Start Commands
 
 ### Basic Flight Simulation
 ```
-python run_analysis.py
+python src\rocket_toolkit\cli\main.py
 ```
 This runs a flight simulation with default settings and displays trajectory plots, thermal profiles, and stability visualization.
 
 ### Interactive Menu
 ```
-python run_analysis.py -i
+python src\rocket_toolkit\cli\main.py -i
 ```
 Opens an interactive menu with all analysis options. Recommended for first-time users.
 
 ### Material Comparison
 ```
-python run_analysis.py -c
+python src\rocket_toolkit\cli\main.py -c
 ```
 Compares all available fin materials for thermal performance and weight optimization.
 
 ### Stability Analysis
 ```
-python run_analysis.py -s
+python src\rocket_toolkit\cli\main.py -s
 ```
 Generates stability diagrams at key flight stages (launch, max-Q, burnout, apogee, landing).
 
 ### Team Data Management
 ```
-python run_analysis.py -t
+python src\rocket_toolkit\cli\main.py -t
 ```
 Manage component data from different design teams.
 
@@ -54,8 +53,6 @@ Manage component data from different design teams.
 | `-s` | Run stability analysis | Series of stability diagrams |
 | `--stage=STAGE` | Flight stage for stability analysis | Stability diagram for specific stage |
 | `-t` | Manage team component data | Team data templates and summaries |
-| `--show-plots` | Force display plots on screen | Override config to show plots |
-| `--hide-plots` | Force hide plots on screen | Override config to hide plots |
 
 ### Flight Stage Options for `--stage`
 - `launch` - Initial launch conditions
@@ -68,43 +65,16 @@ Manage component data from different design teams.
 python run_analysis.py -m "Titanium Ti-6Al-4V" -f  # Fast simulation with titanium
 python run_analysis.py -s --stage=burnout          # Stability at burnout only
 python run_analysis.py -c -f                       # Fast material comparison
-python run_analysis.py --show-plots                # Enable plot display on screen
-python run_analysis.py --hide-plots -c             # Hide plots, only save PDF
 ```
 
-## Plot Display Control
-
-The toolkit now features intelligent plot display control:
-
 ### **Default Behavior** (Recommended)
-- **Plots**: Hidden by default (no screen pop-ups)  
 - **PDFs**: Always generated with comprehensive analysis
 - **MP4**: Available when enabled in config
 
 ### **Configuration Control**
-Set in `config.py`:
-```python
-show_plots = False  # Default: no screen pop-ups
-show_plots = True   # Enable screen display
-```
-
-### **Command Line Override**
-```bash
-python run_analysis.py --show-plots    # Force show plots on screen
-python run_analysis.py --hide-plots    # Force hide plots on screen
-```
-
-### **Interactive Menu Toggle**
-- Option 9 in the interactive menu toggles plot display
-- Setting persists for the entire session
-- PDFs are always generated regardless of plot display setting
-
-### **When to Use Plot Display**
-- **OFF (Default)**: Clean automated analysis, batch processing
-- **ON**: Development, debugging, detailed inspection of individual plots
+Set in `config.json`, when adjusted from interactive menu, functionality can be garantueed, but simply editing the config.json is also possible:
 
 ## Output Files and Naming Convention
-
 All analysis outputs are saved to the `output` directory with standardized PDF reports and optional MP4 animations:
 
 ### PDF Report Naming Convention
@@ -126,6 +96,7 @@ All analysis outputs are saved to the `output` directory with standardized PDF r
 - `Inconel_718` - Inconel 718
 - `Beryllium` - Beryllium
 - `Carbon_carbon_matrix_composite` - Carbon-carbon composite
+- More materials can be added through the interactive material
 
 ### Flight Stage Abbreviations
 - `launch` - Launch conditions
@@ -164,60 +135,10 @@ All analysis outputs are saved to the `output` directory with standardized PDF r
 
 ## Configuration Guide
 
-The toolkit can be configured without modifying code by adjusting parameters in `config.py`.
+The toolkit can be configured without modifying code by adjusting parameters in `config.json`.
 
 ### Key Configuration Parameters
-
-#### Rocket Geometry
-```python
-rocket_length = 2.5        # Total rocket length (m)
-rocket_diameter = 0.5      # Rocket diameter (m)
-nose_cone_length = 0.3     # Nose cone length (m)
-nose_cone_shape = "ogive"  # "conical", "ogive", or "elliptical"
-```
-
-#### Component Masses and Positions
-```python
-# Format: mass (kg) and position from nose tip (m)
-nose_cone_mass = 0.85
-nose_cone_cg_position = 0.15
-
-# Add other components similarly
-```
-
-#### Fin Parameters
-```python
-fin_height = 0.2           # Fin height (m)
-fin_width = 0.25           # Fin width (m)
-fin_sweep = 0.15           # Fin sweep distance (m)
-num_fins = 4               # Number of fins
-fin_material = "Titanium Ti-6Al-4V"  # Default material
-```
-
-#### Animation Settings
-```python
-create_temperature_animation = False  # Set to True to enable MP4 animations
-animation_frames = 120               # Number of frames for animation
-```
-
-#### Plot Display Control
-```python
-show_plots = False                   # Control screen plot display (PDFs always generated)
-pdf_output_enabled = True            # Enable PDF report generation  
-pdf_dpi = 300                       # Resolution for PDF figures
-```
-
-#### Stability Criteria
-```python
-min_caliber_stability = 1.0  # Minimum calibers for stability
-max_caliber_stability = 6.0  # Maximum calibers (too high = overstable)
-```
-
-#### Simulation Parameters
-```python
-dt = 0.01                  # Time step (s)
-afterTopReached = 5000     # Additional cycles after apogee
-```
+**explanation still to be added**
 
 ## Setting Up Team Data Integration
 
@@ -276,31 +197,9 @@ To integrate data from multiple design teams:
 ## File Organization
 
 ```
-project/
-├── output/                    # All PDF reports and animations
-│   ├── FS_*.pdf              # Flight simulation reports
-│   ├── MC_*.pdf              # Material comparison reports  
-│   ├── SA_*.pdf              # Stability analysis reports
-│   ├── TO_*.pdf              # Trajectory optimization reports
-│   └── *.mp4                 # Temperature animations (optional)
-├── Team_data/                # Team component data files
-│   ├── aero_group.json
-│   ├── fuselage_group.json
-│   └── nozzle_group.json
-├── run_analysis.py           # Main analysis interface
-├── main.py                   # Core simulation engine
-├── config.py                 # Configuration parameters
-└── [other analysis modules]
+still to be done
 ```
 
 ## AI Usage Clarification
 
-AI has been used to make otherwise cumbersome tasks a lot more doable making it easier/faster to build a big system of codes. The AI Bot that was used is Claude 3.7 Sonnet and has been proven very helpful when it comes to larger codes like these. Below I will clarify what code was written by AI:
-- **fin_animation.py** - everything
-- **rocket_stability.py** - everything  
-- **rocket_fin_tracker.py** - everything
-- **fin_temp_distribution.py** - all the plotting stuff
-- **material_comparison.py** - all the plotting stuff
-- **thermal_calc.py** - gave it the theory and it spat out the code (had to guide very meticulously tho since it wasn't very accurate in the beginning)
-
-and for some other codes i used it to rebuild them to a class system and for some synchronisation issues
+AI has been used to speed up some parts of the coding, mostly with helping to quickly understand errors or finding all locations where a certain mistake was made. I have also used it to come up with different coding structures that can make sure the code can be expanded without having to restructure the code a lot. This was important since i am not a data science student but an engineering student and this is not my field of expertise.
