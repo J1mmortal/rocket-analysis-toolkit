@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+import json
 import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
@@ -16,6 +17,76 @@ from src.rocket_toolkit.geometry.component_manager import ComponentData
 from src.rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
 from docs.examples import material_comparison_example
 
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if not os.path.exists(CONFIG_FILE):
+        default_config = {
+            "paths": {
+                "team_data": "./Team_data",
+                "output": "./output"
+            },
+        }
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(default_config, f, indent=2)
+        return default_config
+    with open(CONFIG_FILE) as f:
+        return json.load(f)
+
+def configure_settings():
+    config = load_config()
+    print("\nEnter new values or press Enter to keep current value:")
+    for section, section_values in config.items():
+        print(f"\n[{section}]")
+        if isinstance(section_values, dict):
+            for key, value in section_values.items():
+                new_val = input(f"{key} [{value}]: ").strip()
+                if new_val:
+                    try:
+                        cast_val = type(value)(new_val)
+                    except Exception:
+                        cast_val = new_val
+                    section_values[key] = cast_val
+        else:
+            pass
+    save_config(config)
+    print("Configuration updated!")
+
+def get_fin_material():
+    with open("config.json") as f:
+        config = json.load(f)
+    return config.get("fin_analysis", {}).get("fin_material", "Aluminum 6061-T6")
+
+def save_config(config):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=2)
+
+def bootstrap():
+    config = load_config()
+    paths = config.get("paths", {})
+    updated = False
+
+    for folder_key in ["team_data", "output"]:
+        folder_path = paths.get(folder_key, f"./{folder_key.capitalize()}")
+        if not os.path.exists(folder_path):
+            print(f"The folder '{folder_path}' for '{folder_key}' was not found.")
+            create = input(f"Do you want to create it? [Y/n]: ").strip().lower()
+            if create in ("", "y", "yes"):
+                os.makedirs(folder_path)
+                print(f"Created folder: {folder_path}")
+            else:
+                new_path = input(f"Enter path to existing {folder_key} folder or press Enter to skip: ").strip()
+                if new_path and os.path.exists(new_path):
+                    folder_path = new_path
+                else:
+                    print(f"Warning: {folder_key} folder not configured!")
+            paths[folder_key] = folder_path
+            updated = True
+
+    if updated:
+        config["paths"] = paths
+        save_config(config)
+
 def load_team_data():
     load_start = time.time()
     component_manager = ComponentData()
@@ -28,11 +99,6 @@ def load_team_data():
     return component_manager
 
 def create_initial_conditions_page(simulation_type, **kwargs):
-    """
-    Args:
-        simulation_type: Type of simulation ("flight", "material_comparison", "stability", "trajectory")
-        **kwargs: Additional parameters specific to the simulation type
-    """
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if simulation_type == "flight":
@@ -99,8 +165,6 @@ def create_initial_conditions_page(simulation_type, **kwargs):
 
 def _create_flight_conditions_content(material_name=None, component_manager=None, fast_mode=False, **kwargs):
     content = []
-    
-    # Simulation Parameters
     content.append("="*70)
     content.append("SIMULATION PARAMETERS")
     content.append("="*70)
@@ -189,7 +253,8 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     
     if material_name:
         try:
-            fin = RocketFin()
+            fin_material = get_fin_material()
+            fin = RocketFin(material_name=fin_material)
             fin.set_material(material_name)
             fin.calculate_fin_dimensions(verbose=False)
             
@@ -229,7 +294,8 @@ def _create_material_comparison_conditions_content(fast_mode=False, component_ma
     content = []
     
     try:
-        fin = RocketFin()
+        fin_material = get_fin_material()
+        fin = RocketFin(material_name=fin_material)
         materials = fin.get_available_materials()
     except:
         materials = ["Unable to load materials"]
@@ -338,7 +404,7 @@ def _create_trajectory_conditions_content(target_altitude=100000, component_mana
     content.append("TRAJECTORY OPTIMIZATION PARAMETERS")
     content.append("="*70)
     content.append(f"Target Altitude:            {target_altitude/1000:.0f} km ({target_altitude} m)")
-    content.append(f"Analysis Type:              Trajectory optimization")
+    content.append("Analysis Type:              Trajectory optimization")
     content.append("")
     
     content.append("="*70)
@@ -355,7 +421,7 @@ def _create_trajectory_conditions_content(target_altitude=100000, component_mana
     content.append("BASELINE SIMULATION PARAMETERS")
     content.append("="*70)
     content.append(f"Material Used:              {getattr(config, 'fin_material', 'Titanium Ti-6Al-4V')}")
-    content.append(f"Fast Mode:                  True")
+    content.append("Fast Mode:                  True")
     content.append(f"Time Step (dt):             {config.dt} s")
     content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
     content.append("")
@@ -700,7 +766,8 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     print("\nSetting dynamic pressure parameters for fin calculations...")
     
     fin_start = time.time()
-    fin = RocketFin()
+    fin_material = get_fin_material()
+    fin = RocketFin(material_name=fin_material)
     
     max_q = 82800.0 
     config.max_q = max_q
@@ -850,7 +917,8 @@ def run_stability_analysis(flight_stage=None):
     component_manager = load_team_data()
     
     fin_init_start = time.time()
-    fin = RocketFin()
+    fin_material = get_fin_material()
+    fin = RocketFin(material_name=fin_material)
     fin.calculate_fin_dimensions(verbose=False)
     fin_init_time = time.time() - fin_init_start
     
@@ -1099,7 +1167,8 @@ def main_menu():
         print("6. Run stability analysis (specific flight stage)")
         print("7. Trajectory optimization (100km target)") 
         print("8. Manage team component data")
-        print("9. Exit")
+        print("9. Configure settings")
+        print("0. Exit")
         
         choice = input("\nEnter choice (1-9): ")
         choice_start = time.time()
@@ -1108,7 +1177,8 @@ def main_menu():
             run_single_material_analysis(fast_mode=False)
         elif choice == '2':
             material_start = time.time()
-            fin = RocketFin()
+            fin_material = get_fin_material()
+            fin = RocketFin(material_name=fin_material)
             materials = fin.get_available_materials()
             material_load_time = time.time() - material_start
             
@@ -1157,7 +1227,9 @@ def main_menu():
             run_trajectory_optimization()
         elif choice == '8':
             manage_team_data()
-        elif choice == '9': 
+        elif choice == '9':
+            configure_settings()
+        elif choice == '0': 
             plt.close('all')
             print("Exiting...")
             break
@@ -1172,6 +1244,7 @@ def main_menu():
             
 if __name__ == "__main__":
     execution_start = time.time()
+    bootstrap()
     
     parser = argparse.ArgumentParser(description="Rocket Analysis Tools (Optimized)")
     parser.add_argument("-m", "--material", help="Specify fin material")
@@ -1199,3 +1272,4 @@ if __name__ == "__main__":
     
     execution_time = time.time() - execution_start
     print(f"\nTotal program execution time: {execution_time:.3f} seconds")
+    

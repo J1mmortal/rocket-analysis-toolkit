@@ -15,7 +15,7 @@ def get_team_data_path():
     return team_data_path
 
 class RocketFin:
-    def __init__(self):
+    def __init__(self, material_name=None):
         self.delta_v = 1400  # m/s required
         self.isp = 235  # sec
         self.m_payload = 1.3  # kg
@@ -52,7 +52,9 @@ class RocketFin:
         self.fin_mass = None
         self.materials_db = MaterialsDatabase()
         self.material_dimensions = {}
-        self.set_material("Aluminum 6061-T6")
+        if material_name is None:
+            material_name = "Aluminum 6061-T6"  # Default fallback
+        self.set_material(material_name)
         self.all_materials_data = None
         self._masses_cache = None
         self._component_data_cache = None
@@ -61,28 +63,36 @@ class RocketFin:
         self._cl = 2 * np.pi * self.aoa_rad
     
     def set_material(self, material_name):
+        print("test1")
+        if not material_name:
+            return False
+    
         material = self.materials_db.get_material_properties(material_name)
-        
-        if material:
+        if not material:
+            print(f"Warning: Material '{material_name}' not found in database. Using default properties.")
             self.material_name = material_name
-            self.thermal_conductivity = material["thermal_conductivity"]
-            self.density = material["density"]
-            self.specific_heat = material["specific_heat"]
-            self.max_service_temp = material["max_service_temp"]
-            self.yield_strength = material["yield_strength"]
-            self.thermal_expansion = material["thermal_expansion"]
-            self.emissivity = material["emissivity"]
-            
-            if material_name in self.material_dimensions:
-                dims = self.material_dimensions[material_name]
-                self.fin_area = dims["area"]
-                self.fin_height = dims["height"]
-                self.fin_width = dims["width"]
-                self.fin_mass = dims["mass"]
-                self.radial_fin_length = dims["radial_length"]
-            
-            return True
-        return False
+            return False
+    
+        self.material_name = material_name
+        self.thermal_conductivity = material["thermal_conductivity"]
+        self.density = material["density"]
+        self.specific_heat = material["specific_heat"]
+        self.max_service_temp = material["max_service_temp"]
+        self.yield_strength = material["yield_strength"]
+        self.thermal_expansion = material["thermal_expansion"]
+        self.emissivity = material["emissivity"]
+    
+        # Optionally handle material-specific dimensions if you are still using them
+        if hasattr(self, "material_dimensions") and material_name in self.material_dimensions:
+            dims = self.material_dimensions[material_name]
+            self.fin_area = dims["area"]
+            self.fin_height = dims["height"]
+            self.fin_width = dims["width"]
+            self.fin_mass = dims["mass"]
+            self.radial_fin_length = dims["radial_length"]
+    
+        return True
+
     
     def get_available_materials(self):
         return self.materials_db.get_available_materials()

@@ -1,0 +1,6 @@
+{
+  "paths": {
+    "team_data": "./Team_data",
+    "output": "./output"
+  }
+}
