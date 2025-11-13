@@ -17,7 +17,11 @@ from src.rocket_toolkit.geometry.component_manager import ComponentData
 from src.rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
 from docs.examples import material_comparison_example
 
-CONFIG_FILE = "config.json"
+CONFIG_FILE = "src/rocket_toolkit/config.json"
+EDITABLE_KEYS = {"paths": ["team_data", "output"], 
+                 "simulation": ["v0", "h0", "q0"], 
+                 "engine": ["isp_sea", "isp_vac", "fuel_flow_rate"],
+                 "rocket": ["rocket_radius", "drag_coefficient", "max_q"]}
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
@@ -29,8 +33,10 @@ def load_config():
         }
         with open(CONFIG_FILE, "w") as f:
             json.dump(default_config, f, indent=2)
+        print("\nCant find config.json file, will load default config")
         return default_config
     with open(CONFIG_FILE) as f:
+        print("\nConfig file found succesfully")
         return json.load(f)
 
 def configure_settings():
@@ -39,7 +45,11 @@ def configure_settings():
     for section, section_values in config.items():
         print(f"\n[{section}]")
         if isinstance(section_values, dict):
+            editable_keys = EDITABLE_KEYS.get(section, [])
             for key, value in section_values.items():
+                if key not in editable_keys:
+                    print(f"{key} [{value}]: [READ-ONLY]")
+                    continue
                 new_val = input(f"{key} [{value}]: ").strip()
                 if new_val:
                     try:
@@ -53,7 +63,7 @@ def configure_settings():
     print("Configuration updated!")
 
 def get_fin_material():
-    with open("config.json") as f:
+    with open(CONFIG_FILE) as f:
         config = json.load(f)
     return config.get("fin_analysis", {}).get("fin_material", "Aluminum 6061-T6")
 
@@ -1170,7 +1180,7 @@ def main_menu():
         print("9. Configure settings")
         print("0. Exit")
         
-        choice = input("\nEnter choice (1-9): ")
+        choice = input("\nEnter choice (1-0): ")
         choice_start = time.time()
         
         if choice == '1':

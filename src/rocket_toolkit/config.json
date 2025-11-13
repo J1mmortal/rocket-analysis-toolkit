@@ -5,7 +5,7 @@
   },
   "earth_constants": {
     "gravitational_constant": 6.6743e-11,
-    "mass_earth": 5.97219e24,
+    "mass_earth": 5.97219e+24,
     "earth_radius": 6378000
   },
   "pdf_output": {
@@ -22,8 +22,7 @@
   "engine": {
     "isp_sea": 235,
     "isp_vac": 300,
-    "fuel_flow_rate": 4.4,
-    "initial_fuel_mass": 800
+    "fuel_flow_rate": 4.4
   },
   "rocket": {
     "dry_weight": 800,
@@ -32,21 +31,7 @@
     "max_q": 82800,
     "length": 2.5,
     "diameter": 0.5,
-    "nose_cone_length": 0.3,
-    "nose_cone_shape": "ogive",
-    "nose_cone_mass": 0.7,
-    "nose_cone_cg_position": 0.15,
-    "fuselage_mass": 1.2,
-    "fuselage_cg_position": 1.2,
-    "nozzle_mass": 0.6,
-    "nozzle_cg_position": 2.4,
-    "engine_mass": 0.8,
-    "engine_cg_position": 2.3,
-    "fin_set_cg_position": 2.1,
-    "propellant_mass": 800,
-    "propellant_cg_position": 1.9,
-    "recovery_system_mass": 0.4,
-    "recovery_system_position": 0.9
+    "nose_cone_shape": "ogive"
   },
   "fin_analysis": {
     "fin_material": "Titanium Ti-6Al-4V",
@@ -64,71 +49,69 @@
   },
   "materials": {
     "Aluminum 6061-T6": {
-        "thermal_conductivity": 167,
-        "density": 2700,
-        "specific_heat": 896,
-        "max_service_temp": 473,
-        "yield_strength": 270,
-        "thermal_expansion": 23.6e-6,
-        "emissivity": 0.1
+      "thermal_conductivity": 167,
+      "density": 2700,
+      "specific_heat": 896,
+      "max_service_temp": 473,
+      "yield_strength": 270,
+      "thermal_expansion": 2.36e-05,
+      "emissivity": 0.1
     },
     "Alumina": {
-        "thermal_conductivity": 33,
-        "density": 3750,
-        "specific_heat": 690,
-        "max_service_temp": 1488,
-        "yield_strength": 270,
-        "thermal_expansion": 6e-6,
-        "emissivity": 0.2
+      "thermal_conductivity": 33,
+      "density": 3750,
+      "specific_heat": 690,
+      "max_service_temp": 1488,
+      "yield_strength": 270,
+      "thermal_expansion": 6e-06,
+      "emissivity": 0.2
     },
     "Titanium Ti-6Al-4V": {
-        "thermal_conductivity": 25,
-        "density": 3930,
-        "specific_heat": 610,
-        "max_service_temp": 505,
-        "yield_strength": 1050,
-        "thermal_expansion": 6.6e-6,
-        "emissivity": 0.63
+      "thermal_conductivity": 25,
+      "density": 3930,
+      "specific_heat": 610,
+      "max_service_temp": 505,
+      "yield_strength": 1050,
+      "thermal_expansion": 6.6e-06,
+      "emissivity": 0.63
     },
     "Stainless Steel 304": {
-        "thermal_conductivity": 15.5,
-        "density": 7950,
-        "specific_heat": 500,
-        "max_service_temp": 850,
-        "yield_strength": 264,
-        "thermal_expansion": 17.3e-6,
-        "emissivity": 0.44
+      "thermal_conductivity": 15.5,
+      "density": 7950,
+      "specific_heat": 500,
+      "max_service_temp": 850,
+      "yield_strength": 264,
+      "thermal_expansion": 1.73e-05,
+      "emissivity": 0.44
     },
     "Inconel 718": {
-        "thermal_conductivity": 12.1,
-        "density": 8230,
-        "specific_heat": 448,
-        "max_service_temp": 632,
-        "yield_strength": 770,
-        "thermal_expansion": 13.0e-6,
-        "emissivity": 0.28
+      "thermal_conductivity": 12.1,
+      "density": 8230,
+      "specific_heat": 448,
+      "max_service_temp": 632,
+      "yield_strength": 770,
+      "thermal_expansion": 1.3e-05,
+      "emissivity": 0.28
     },
     "Beryllium": {
-        "thermal_conductivity": 208,
-        "density": 1850,
-        "specific_heat": 1880,
-        "max_service_temp": 680,
-        "yield_strength": 247,
-        "thermal_expansion": 11.4e-6,
-        "emissivity": 0.2
+      "thermal_conductivity": 208,
+      "density": 1850,
+      "specific_heat": 1880,
+      "max_service_temp": 680,
+      "yield_strength": 247,
+      "thermal_expansion": 1.14e-05,
+      "emissivity": 0.2
     },
     "Carbon carbon matrix composite": {
-        "thermal_conductivity": 40,
-        "density": 1700,
-        "specific_heat": 756,
-        "max_service_temp": 2338,
-        "yield_strength": 500,
-        "thermal_expansion": 4e-6,
-        "emissivity": 0.9
+      "thermal_conductivity": 40,
+      "density": 1700,
+      "specific_heat": 756,
+      "max_service_temp": 2338,
+      "yield_strength": 500,
+      "thermal_expansion": 4e-06,
+      "emissivity": 0.9
     }
   },
-  "presets": {
-  },
-  "settings": {
-  }
+  "presets": {},
+  "settings": {}
 }
