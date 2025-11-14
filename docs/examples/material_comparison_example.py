@@ -1,10 +1,15 @@
 import numpy as np
+import os
+import json
 import matplotlib.pyplot as plt
 from src.rocket_toolkit.geometry.rocket_fin import RocketFin
 from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
 from src.rocket_toolkit.core import flight_simulator
-from src.rocket_toolkit import config
 import time
+
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
 
 def compare_fin_materials_for_flight(fast_mode=True):
     start_time = time.time()

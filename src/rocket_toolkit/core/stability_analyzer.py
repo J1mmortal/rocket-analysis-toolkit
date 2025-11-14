@@ -1,10 +1,14 @@
 import numpy as np
+import os
+import json
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.path import Path
-from src.rocket_toolkit import config
 from src.rocket_toolkit.geometry.component_manager import ComponentData
 
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
 
 class RocketStability:
     def __init__(self):

@@ -25,8 +25,6 @@
     "fuel_flow_rate": 4.4
   },
   "rocket": {
-    "dry_weight": 800,
-    "rocket_radius": 0.175,
     "drag_coefficient": 0.5,
     "max_q": 82800,
     "length": 2.5,

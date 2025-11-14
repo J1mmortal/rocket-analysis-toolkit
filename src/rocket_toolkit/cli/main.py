@@ -8,7 +8,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 from src.rocket_toolkit.core import flight_simulator
 from src.rocket_toolkit.core import thermal_analyzer
-from src.rocket_toolkit import config
 from src.rocket_toolkit.geometry.rocket_fin import RocketFin
 from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
 from src.rocket_toolkit.plotting.fin_animation import create_fin_temperature_animation
@@ -223,10 +222,10 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append("ROCKET GEOMETRY")
     content.append("="*70)
-    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', 2.5)} m")
-    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', 0.5)} m")
+    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', "NOT FOUND")} m")
+    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', "NOT FOUND")} m")
     content.append(f"Rocket Radius:              {config.rocket_radius} m")
-    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', 0.3)} m")
+    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', "NOT FOUND")} m")
     content.append(f"Nose Cone Shape:            {getattr(config, 'nose_cone_shape', 'ogive')}")
     content.append("")
     

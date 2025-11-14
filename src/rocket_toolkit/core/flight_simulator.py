@@ -2,12 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import os
+import json
 import time
 from src.rocket_toolkit.geometry.rocket_fin import RocketFin
 from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
 from src.rocket_toolkit.core.stability_analyzer import RocketStability
 from src.rocket_toolkit.geometry.component_manager import ComponentData
-from src.rocket_toolkit import config
 from src.rocket_toolkit.plotting import fin_animation
 import docs.examples.material_comparison_example
 import isacalc as isa
@@ -25,6 +25,9 @@ mesh_size = 20
 _cache = {}
 _atmosphere_cache = {}
 
+config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+with open(config_path, 'r') as f:
+    config = json.load(f)
 
 def get_cached_atmosphere(altitude):
     global _atmosphere_cache
