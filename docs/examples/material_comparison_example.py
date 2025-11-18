@@ -7,7 +7,8 @@ from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracke
 from src.rocket_toolkit.core import flight_simulator
 import time
 
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+config_path = os.path.join(project_root, 'src', 'rocket_toolkit', 'config.json')
 with open(config_path, 'r') as f:
     config = json.load(f)
 
@@ -28,18 +29,18 @@ def compare_fin_materials_for_flight(fast_mode=True):
         original_mesh_size = flight_simulator.mesh_size
         flight_simulator.mesh_size = 12  # Smaller mesh for speed
     
-    if not hasattr(config, 'max_q') or config.max_q <= 0:
+    if not hasattr(config, 'max_q') or config["rocket"]["max_q"] <= 0:
         print("Running initial simulation to determine dynamic pressure parameters...")
         from component_manager import ComponentData
         component_manager = ComponentData()
         component_manager.update_from_team_files()
-        component_manager.update_config()
+        component_manager.update_config(config)
         
         flight_simulator.component_manager = component_manager
         flight_simulator.main(material_name="Titanium Ti-6Al-4V", fast_mode=True, skip_animation=True)
-        print(f"Initial simulation completed. Maximum dynamic pressure: {config.max_q:.1f} Pa")
+        print(f"Initial simulation completed. Maximum dynamic pressure: {config["rocket"]["max_q"]:.1f} Pa")
     
-    rocket_fin.max_q = config.max_q
+    rocket_fin.max_q = config["rocket"]["max_q"]
     print(f"Using dynamic pressure (max_q) for all material comparisons: {rocket_fin.max_q:.1f} Pa")
     
     simulation_times = []

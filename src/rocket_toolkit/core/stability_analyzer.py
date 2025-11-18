@@ -415,7 +415,7 @@ def main():
     
     component_manager = ComponentData()
     component_manager.update_from_team_files()
-    component_manager.update_config()
+    component_manager.update_config(config)
     component_manager.print_component_summary()
     
     fin = RocketFin()

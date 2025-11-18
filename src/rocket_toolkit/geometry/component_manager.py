@@ -140,55 +140,26 @@ class ComponentData:
     def get_component_data(self):
         return self.components
     
-    def update_config(self):
-        config.nose_cone_mass = 0
-        config.fuselage_mass = 0
-        config.nozzle_mass = 0
-        config.engine_mass = 0  
-        config.propellant_mass = 0
-        config.recovery_system_mass = 0
-        fuselage_mass = 0
-        fuselage_mass_position_product = 0
-        
-        for component, data in self.components.items():
-            comp_name = component.lower()
-            
-            if "fuselage" in comp_name:
-                fuselage_mass += data["mass"]
-                fuselage_mass_position_product += data["mass"] * data["position"]
-            elif comp_name == "nose cone" or "nose" in comp_name:
-                config.nose_cone_mass = data["mass"]
-                config.nose_cone_cg_position = data["position"]
-                print(f"Updated config: nose_cone_mass = {data['mass']} kg")
-            elif comp_name == "nozzle":
-                config.nozzle_mass = data["mass"]
-                config.nozzle_cg_position = data["position"]
-                print(f"Updated config: nozzle_mass = {data['mass']} kg")
-            elif comp_name == "engine":
-                config.engine_mass = data["mass"]
-                config.engine_cg_position = data["position"]
-                print(f"Updated config: engine_mass = {data['mass']} kg")
-            elif comp_name == "propellant":
-                config.propellant_mass = data["mass"]
-                config.propellant_cg_position = data["position"]
-                print(f"Updated config: propellant_mass = {data['mass']} kg")
-            elif "fin" in comp_name and "calculate" in comp_name:
-                pass
-        
-        if fuselage_mass > 0:
-            avg_position = fuselage_mass_position_product / fuselage_mass if fuselage_mass > 0 else 0
-            config.fuselage_mass = fuselage_mass
-            config.fuselage_cg_position = avg_position
-            
-            print(f"Updated config: fuselage_mass = {fuselage_mass} kg")
-        
-        dry_weight = 0
-        for component, data in self.components.items():
-            if "propellant" not in component.lower():
-                dry_weight += data["mass"]
-        
-        config.dry_weight = dry_weight
-        print(f"Updated config: dry_weight = {dry_weight} kg (sum of all non-propellant components)")
+    def update_config(self, config):
+        # Mass sums
+        dry_mass = 0
+        propellant_mass = 0
+    
+        for name, data in self.components.items():
+            mass = data.get('mass', 0)
+            position = data.get('position', 0)
+            config[name + "_mass"] = mass
+            config[name + "_cg_position"] = position
+    
+            if "propellant" in name.lower():
+                propellant_mass += mass
+            else:
+                dry_mass += mass
+    
+        config["dry_mass"] = dry_mass
+        config["propellant_mass"] = propellant_mass
+        config["wet_mass"] = dry_mass + propellant_mass
+        print(f"Updated config: dry_weight = {dry_mass} kg (sum of all non-propellant components)")
         
     def print_component_summary(self):
         if not self.has_loaded_data or not self.components:

@@ -158,31 +158,31 @@ def init(material_name=None, fast_mode=False):
     global r, rc, ec, time_points, fin_tracker, component_manager
     time_points = [0]
     dry_weight, propellant_mass = load_component_data()
-    atm_data = get_cached_atmosphere(config.h0)
+    atm_data = get_cached_atmosphere(config["simulation"]["h0"])
     initial_nose_cone_temp = atm_data[1]
     r0 = rocket_variables(
-        config.v0, 
-        config.h0, 
+        config["simulation"]["v0"], 
+        config["simulation"]["h0"], 
         propellant_mass,
         initial_nose_cone_temp, 
-        config.isp_sea, 
-        config.q0
+        config["engine"]["isp_sea"], 
+        config["simulation"]["q0"]
     )
     r = [r0]
     
     rc = rocket_constants(
         dry_weight,
-        config.fuel_flow_rate, 
-        config.rocket_radius, 
-        config.drag_coefficient, 
-        config.isp_sea, 
-        config.isp_vac
+        config["engine"]["fuel_flow_rate"], 
+        config["rocket"]["diameter"]/2, 
+        config["rocket"]["drag_coefficient"], 
+        config["engine"]["isp_sea"], 
+        config["engine"]["isp_vac"]
     )
     
     ec = earth_constants(
-        config.gravitational_constant, 
-        config.mass_earth, 
-        config.earth_radius
+        config["earth_constants"]["gravitational_constant"], 
+        config["earth_constants"]["mass_earth"], 
+        config["earth_constants"]["earth_radius"]
     )
     
     fin = RocketFin()

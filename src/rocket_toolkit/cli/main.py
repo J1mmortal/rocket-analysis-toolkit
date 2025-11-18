@@ -22,7 +22,10 @@ EDITABLE_KEYS = {"paths": ["team_data", "output"],
                  "engine": ["isp_sea", "isp_vac", "fuel_flow_rate"],
                  "rocket": ["rocket_radius", "drag_coefficient", "max_q"]}
 
+
+
 def load_config():
+    global config
     if not os.path.exists(CONFIG_FILE):
         default_config = {
             "paths": {
@@ -36,7 +39,8 @@ def load_config():
         return default_config
     with open(CONFIG_FILE) as f:
         print("\nConfig file found succesfully")
-        return json.load(f)
+        config = json.load(f)
+        return config
 
 def configure_settings():
     config = load_config()
@@ -100,7 +104,7 @@ def load_team_data():
     load_start = time.time()
     component_manager = ComponentData()
     component_manager.update_from_team_files()
-    component_manager.update_config()
+    component_manager.update_config(config)
     
     load_time = time.time() - load_start
     print(f"Team data loaded in {load_time:.3f} seconds")
@@ -768,7 +772,7 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     component_manager = load_team_data()
     
     if material_name is None:
-        material_name = config.fin_material
+        material_name = config["fin_analysis"]["fin_material"]
     
     print(f"\nRunning flight simulation with fin material: {material_name}")    
     component_manager.print_component_summary()
@@ -778,17 +782,14 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     fin_material = get_fin_material()
     fin = RocketFin(material_name=fin_material)
     
-    max_q = 82800.0 
-    config.max_q = max_q
+    fin.max_q = config["rocket"]["max_q"]
     
-    print(f"Setting dynamic pressure (max_q) for fin calculations: {max_q} Pa")
-    
-    fin.max_q = max_q
+    print(f"Setting dynamic pressure (fin.max_q) for fin calculations: {fin.max_q} Pa")
     
     if not fin.set_material(material_name):
         print(f"Error: Material '{material_name}' not found. Using default material.")
-        fin.set_material(config.fin_material)
-        material_name = config.fin_material
+        fin.set_material(config["fin_analysis"]["fin_material"])
+        material_name = config["fin_analysis"]["fin_material"]
     
     fin.calculate_fin_dimensions(verbose=True)
     fin_time = time.time() - fin_start
@@ -944,7 +945,7 @@ def run_stability_analysis(flight_stage=None):
         tracker = FinTemperatureTracker(fin)
         flight_simulator.fin_tracker = tracker
         flight_simulator.component_manager = component_manager  # Pass the component manager to main
-        flight_simulator.main(material_name=config.fin_material, fast_mode=True, skip_animation=True)
+        flight_simulator.main(material_name=config["fin_analysis"]["fin_material"], fast_mode=True, skip_animation=True)
         sim_time = time.time() - sim_start
         print(f"Flight simulation completed in {sim_time:.3f} seconds")
         print("\nGenerating stability diagrams throughout flight...")
@@ -1060,7 +1061,7 @@ def manage_team_data():
     elif choice == '2':
         load_start = time.time()
         component_manager.update_from_team_files()
-        component_manager.update_config()
+        component_manager.update_config(config)
         load_time = time.time() - load_start
         print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
     elif choice == '3':
