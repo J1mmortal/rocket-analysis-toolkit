@@ -29,7 +29,23 @@
     "max_q": 82800,
     "length": 2.5,
     "diameter": 0.5,
-    "nose_cone_shape": "ogive"
+    "nose_cone_shape": "ogive",
+    "nose_cone_length": 0.3
+  },
+  "mass_properties": {
+    "nose_cone_mass": 0.7,
+    "nose_cone_cg_position": 0.15,
+    "fuselage_mass": 1.2,
+    "fuselage_cg_position": 1.2,
+    "nozzle_mass": 0.6,
+    "nozzle_cg_position": 2.4,
+    "engine_mass": 0.8,
+    "engine_cg_position": 2.3,
+    "fin_set_cg_position": 2.1,
+    "propellant_mass": 800,
+    "propellant_cg_position": 1.9,
+    "recovery_system_mass": 0.4,
+    "recovery_system_cg_position": 0.9
   },
   "fin_analysis": {
     "fin_material": "Titanium Ti-6Al-4V",
@@ -40,7 +56,7 @@
     "min_caliber_stability": 1.5,
     "max_caliber_stability": 4.0
   },
-  "visualization": {
+  "visualisation": {
     "show_stability_margin": true,
     "show_component_cgs": true,
     "show_rocket_configuration": "2D"

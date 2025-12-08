@@ -39,7 +39,7 @@ def create_fin_temperature_animation(fin_tracker, output_path="fin_animation.mp4
                 mask[i, j] = True
     
     # Select frames for animation (evenly spaced)
-    num_frames = min(config.animation_frames, len(fin_tracker.time_points))
+    num_frames = min(config["fin_analysis"]["animation_frames"], len(fin_tracker.time_points))
     frame_indices = np.linspace(0, len(fin_tracker.time_points)-1, num_frames, dtype=int)
     
     # Check if the tracker has absolute maximum temperature information

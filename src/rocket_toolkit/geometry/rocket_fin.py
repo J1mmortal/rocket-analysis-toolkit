@@ -25,7 +25,7 @@ class RocketFin:
         self.g0 = 9.81  # m/s^2
         self.max_q = 82800.0  # Pascals
         if hasattr(config, 'max_q'):
-            config.max_q = self.max_q
+            config["rocket"]["max_q"] = self.max_q
         self.dt = 0.2  # sec of maneuver to get rotational velocity
         self.min_rad = 1  # rad/s
         self.max_rad = 5  # rad/s

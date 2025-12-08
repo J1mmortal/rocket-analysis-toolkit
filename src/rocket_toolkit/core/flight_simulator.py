@@ -82,7 +82,7 @@ def load_component_data():
             dry_weight += data["mass"]
     
     if propellant_mass == 0:
-        propellant_mass = config.propellant_mass
+        propellant_mass = config["mass_properties"]["propellant_mass"]
         
     min_realistic_dry_weight = 30  
     if dry_weight < min_realistic_dry_weight:
@@ -190,11 +190,11 @@ def init(material_name=None, fast_mode=False):
     if material_name is not None:
         fin.set_material(material_name)
     else:
-        selected_material = config.fin_material if hasattr(config, 'fin_material') else "Titanium Ti-6Al-4V"
+        selected_material = config["fin_analysis"]["fin_material"] if hasattr(config, 'fin_material') else "Titanium Ti-6Al-4V"
         fin.set_material(selected_material)
     
     fin.calculate_fin_dimensions(verbose=False)
-    component_manager.add_calculated_fin_mass(fin.fin_mass, config.fin_set_cg_position, fin.num_fins)
+    component_manager.add_calculated_fin_mass(fin.fin_mass, config["mass_properties"]["fin_set_cg_position"], fin.num_fins)
 
     fin_tracker = FinTemperatureTracker(fin)
     if fast_mode and hasattr(fin_tracker.thermal_analyzer, 'set_comparison_mode'):
@@ -225,10 +225,10 @@ def run_simulation():
     end = 0
     altitude_limit = 500000
     limit_reached = False
-    t += config.dt
-    fin_tracker.update(0.0, r[0].altitude, r[0].speed, config.dt)
-    dt = config.dt
-    afterTopReached = config.afterTopReached
+    t += config["simulation"]["dt"]
+    fin_tracker.update(0.0, r[0].altitude, r[0].speed, config["simulation"]["dt"])
+    dt = config["simulation"]["dt"]
+    afterTopReached = config["simulation"]["after_top_reached"]
     
     iteration_count = 0
     while run:
@@ -332,7 +332,7 @@ def main(material_name=None, fast_mode=False, skip_animation=False):
     if not fast_mode:
         print(f"Plotting completed in {plot_time:.3f} seconds")
 
-    if not fast_mode and not skip_animation and hasattr(config, 'create_temperature_animation') and config.create_temperature_animation:
+    if not fast_mode and not skip_animation and hasattr(config, 'create_temperature_animation') and config["fin_analysis"]["create_temperature_animation"]:
         anim_start = time.time()
         output_dir = "output"
         if not os.path.exists(output_dir):
@@ -435,7 +435,7 @@ def plot_stability_during_flight():
     analysis_points = [
         {"name": "Launch", "idx": 0},
         {"name": "Max-Q", "idx": np.argmax(dynamic_pressures)},
-        {"name": "Burnout", "idx": min(len(r)-1, int(r[0].fuel_mass / rc.fuel_flow_rate / config.dt))},
+        {"name": "Burnout", "idx": min(len(r)-1, int(r[0].fuel_mass / rc.fuel_flow_rate / config["simulation"]["dt"]))},
         {"name": "Max Velocity", "idx": np.argmax(speeds)},
         {"name": "Apogee", "idx": np.argmax(altitudes)},
         {"name": "Landing", "idx": len(r)-1}
@@ -496,9 +496,9 @@ def plot_stability_during_flight():
                          
         if stability.stability_calibers < 0:
             info_color = 'red'
-        elif stability.stability_calibers < config.min_caliber_stability:
+        elif stability.stability_calibers < config["stability"]["min_caliber_stability"]:
             info_color = 'orange'
-        elif stability.stability_calibers > config.max_caliber_stability:
+        elif stability.stability_calibers > config["stability"]["max_caliber_stability"]:
             info_color = 'orange'
         else:
             info_color = 'green'
@@ -544,7 +544,7 @@ def report(limit_reached):
     
     max_dynamic_pressure = np.max(dynamic_pressures)
     print(f"\nMaximum dynamic pressure encountered during flight: {max_dynamic_pressure:.1f} Pa")
-    print(f"Dynamic pressure used for fin sizing (fixed): {config.max_q:.1f} Pa")
+    print(f"Dynamic pressure used for fin sizing (fixed): {config["rocket"]["max_q"]:.1f} Pa")
         
     print('\nWith the following constants:')
     for key, value in vars(rc).items():
@@ -640,7 +640,7 @@ def report(limit_reached):
     
     stability = RocketStability()
     stability.set_fin_properties(fin_tracker.fin)
-    burnout_idx = min(len(r)-1, int(r[0].fuel_mass / rc.fuel_flow_rate / config.dt))
+    burnout_idx = min(len(r)-1, int(r[0].fuel_mass / rc.fuel_flow_rate / config["simulation"]["dt"]))
     apogee_idx = np.argmax(altitudes)
     
     analysis_points = [

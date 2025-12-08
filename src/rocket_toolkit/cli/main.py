@@ -183,8 +183,8 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append(f"Fin Material:               {material_name}")
     content.append(f"Fast Mode:                  {fast_mode}")
-    content.append(f"Time Step (dt):             {config.dt} s")
-    content.append(f"After Top Reached:          {config.afterTopReached} cycles")
+    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
+    content.append(f"After Top Reached:          {config["simulation"]["after_top_reached"]} cycles")
     content.append(f"Animation Enabled:          {getattr(config, 'create_temperature_animation', False)}")
     content.append("")
     content.append("="*70)
@@ -219,7 +219,7 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     else:
         content.append("Using legacy config values:")
         content.append(f"{'Dry Weight':<25} {config.dry_weight:<12.3f} kg")
-        content.append(f"{'Propellant Mass':<25} {config.propellant_mass:<12.3f} kg")
+        content.append(f"{'Propellant Mass':<25} {config["mass_properties"]["propellant_mass"]:<12.3f} kg")
     
     content.append("")
     
@@ -228,7 +228,7 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append(f"Rocket Length:              {getattr(config, 'rocket_length', "NOT FOUND")} m")
     content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', "NOT FOUND")} m")
-    content.append(f"Rocket Radius:              {config.rocket_radius} m")
+    content.append(f"Rocket Radius:              {config["rocket"]["diameter"] / 2} m")
     content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', "NOT FOUND")} m")
     content.append(f"Nose Cone Shape:            {getattr(config, 'nose_cone_shape', 'ogive')}")
     content.append("")
@@ -236,32 +236,32 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append("ENGINE PARAMETERS")
     content.append("="*70)
-    content.append(f"ISP Sea Level:              {config.isp_sea} s")
-    content.append(f"ISP Vacuum:                 {config.isp_vac} s")
-    content.append(f"Fuel Flow Rate:             {config.fuel_flow_rate} kg/s")
+    content.append(f"ISP Sea Level:              {config["engine"]["isp_sea"]} s")
+    content.append(f"ISP Vacuum:                 {config["engine"]["isp_vac"]} s")
+    content.append(f"Fuel Flow Rate:             {config["engine"]["fuel_flow_rate"]} kg/s")
     content.append("")
     
     content.append("="*70)
     content.append("INITIAL CONDITIONS")
     content.append("="*70)
-    content.append(f"Initial Velocity:           {config.v0} m/s")
-    content.append(f"Initial Altitude:           {config.h0} m")
-    content.append(f"Initial Dynamic Pressure:   {config.q0} Pa")
+    content.append(f"Initial Velocity:           {config["simulation"]["v0"]} m/s")
+    content.append(f"Initial Altitude:           {config["simulation"]["h0"]} m")
+    content.append(f"Initial Dynamic Pressure:   {config["simulation"]["q0"]} Pa")
     content.append("")
     
     content.append("="*70)
     content.append("AERODYNAMIC PARAMETERS")
     content.append("="*70)
-    content.append(f"Drag Coefficient:           {config.drag_coefficient}")
-    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
+    content.append(f"Drag Coefficient:           {config["rocket"]["drag_coefficient"]}")
+    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
     content.append("")
     
     content.append("="*70)
     content.append("EARTH CONSTANTS")
     content.append("="*70)
-    content.append(f"Gravitational Constant:     {config.gravitational_constant}")
-    content.append(f"Earth Mass:                 {config.mass_earth} kg")
-    content.append(f"Earth Radius:               {config.earth_radius} m")
+    content.append(f"Gravitational Constant:     {config["earth_constants"]["gravitational_constant"]}")
+    content.append(f"Earth Mass:                 {config["earth_constants"]["mass_earth"]} kg")
+    content.append(f"Earth Radius:               {config["earth_constants"]["earth_radius"]} m")
     content.append("")
     
     if material_name:
@@ -330,12 +330,12 @@ def _create_material_comparison_conditions_content(fast_mode=False, component_ma
     content.append("="*70)
     content.append("COMMON SIMULATION PARAMETERS")
     content.append("="*70)
-    content.append(f"Time Step (dt):             {config.dt} s")
-    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
-    content.append(f"Drag Coefficient:           {config.drag_coefficient}")
-    content.append(f"ISP Sea Level:              {config.isp_sea} s")
-    content.append(f"ISP Vacuum:                 {config.isp_vac} s")
-    content.append(f"Fuel Flow Rate:             {config.fuel_flow_rate} kg/s")
+    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
+    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
+    content.append(f"Drag Coefficient:           {config["rocket"]["drag_coefficient"]}")
+    content.append(f"ISP Sea Level:              {config["engine"]["isp_sea"]} s")
+    content.append(f"ISP Vacuum:                 {config["engine"]["isp_vac"]} s")
+    content.append(f"Fuel Flow Rate:             {config["engine"]["fuel_flow_rate"]} kg/s")
     content.append("")
     
     if component_manager and component_manager.get_component_data():
@@ -435,8 +435,8 @@ def _create_trajectory_conditions_content(target_altitude=100000, component_mana
     content.append("="*70)
     content.append(f"Material Used:              {getattr(config, 'fin_material', 'Titanium Ti-6Al-4V')}")
     content.append("Fast Mode:                  True")
-    content.append(f"Time Step (dt):             {config.dt} s")
-    content.append(f"Max Dynamic Pressure:       {config.max_q} Pa")
+    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
+    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
     content.append("")
     
     if component_manager and component_manager.get_component_data():
@@ -817,7 +817,7 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     pdf_time = time.time() - pdf_start
     print(f"PDF report generated in {pdf_time:.3f} seconds")
     
-    if not fast_mode and config.create_temperature_animation:
+    if not fast_mode and config["fin_analysis"]["create_temperature_animation"]:
         anim_start = time.time()
         
         output_path = os.path.join(output_dir, f"fin_temp_{material_name.replace(' ', '_')}.mp4")
@@ -976,7 +976,7 @@ def run_stability_analysis(flight_stage=None):
     else:
         print(f"\nAnalyzing stability at flight stage: {flight_stage}")
         
-        propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config.propellant_mass)
+        propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config["mass_properties"]["propellant_mass"])
         
         if flight_stage.lower() == "launch":
             stability.set_flight_conditions(mach=0.1)
@@ -1087,7 +1087,7 @@ def run_trajectory_optimization():
     flight_simulator.component_manager = component_manager
     print("Simulating current configuration...")
     sim_start = time.time()
-    used_material = flight_simulator.init(material_name=config.fin_material, fast_mode=True)
+    used_material = flight_simulator.init(material_name=config["fin_analysis"]["fin_material"], fast_mode=True)
     limit_reached = flight_simulator.run_simulation()
     sim_time = time.time() - sim_start
     print(f"Simulation completed in {sim_time:.3f} seconds")

@@ -184,7 +184,7 @@ class TrajectoryOptimizer:
                     'category': 'Aerodynamics',
                     'suggestion': description,
                     'impact': f'{reduction*100:.0f}% drag reduction → ~{altitude_gain/1000:.1f} km altitude gain',
-                    'implementation': f'Current Cd: {config.drag_coefficient:.2f}, Target: {config.drag_coefficient*(1-reduction):.2f}'
+                    'implementation': f'Current Cd: {config["rocket"]["drag_coefficient"]:.2f}, Target: {config["rocket"]["drag_coefficient"] * (1-reduction):.2f}'
                 })
     
     def _analyze_propellant_optimization(self, components):

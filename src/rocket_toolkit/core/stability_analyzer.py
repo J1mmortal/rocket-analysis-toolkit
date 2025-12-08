@@ -16,11 +16,11 @@ class RocketStability:
         self.component_manager = ComponentData()
         self.component_manager.update_from_team_files()
         self.components = self.component_manager.get_component_data()
-        self.length = config.rocket_length
-        self.diameter = config.rocket_diameter
+        self.length = config["rocket"]["length"]
+        self.diameter = config["rocket"]["diameter"]
         self.radius = self.diameter / 2
-        self.nose_cone_length = config.nose_cone_length
-        self.nose_cone_shape = config.nose_cone_shape
+        self.nose_cone_length = config["rocket"]["nose_cone_length"]
+        self.nose_cone_shape = config["rocket"]["nose_cone_shape"]
         self.fin_height = None
         self.fin_width = None
         self.fin_sweep = None
@@ -43,7 +43,7 @@ class RocketStability:
             if "fins" not in self.component_masses:
                 self.component_masses["fins"] = {
                     "mass": None,
-                    "position": config.fin_set_cg_position
+                    "position": config["mass_properties"]["fin_set_cg_position"]
                 }
                 
             if "propellant" in self.component_masses:
@@ -51,33 +51,33 @@ class RocketStability:
         else:
             self.component_masses = {
                 "nose_cone": {
-                    "mass": config.nose_cone_mass,
-                    "position": config.nose_cone_cg_position
+                    "mass": config["mass_properties"]["nose_cone_mass"],
+                    "position": config["mass_properties"]["nose_cone_cg_position"]
                 },
                 "fuselage": {
-                    "mass": config.fuselage_mass,
-                    "position": config.fuselage_cg_position
+                    "mass": config["mass_properties"]["fuselage_mass"],
+                    "position": config["mass_properties"]["fuselage_cg_position"]
                 },
                 "fins": {
                     "mass": None, 
-                    "position": config.fin_set_cg_position
+                    "position": config["mass_properties"]["fin_set_cg_position"]
                 },
                 "nozzle": {
-                    "mass": config.nozzle_mass,
-                    "position": config.nozzle_cg_position
+                    "mass": config["mass_properties"]["nozzle_mass"],
+                    "position": config["mass_properties"]["nozzle_cg_position"]
                 },
                 "engine": {
-                    "mass": config.engine_mass,
-                    "position": config.engine_cg_position
+                    "mass": config["mass_properties"]["engine_mass"],
+                    "position": config["mass_properties"]["engine_cg_position"]
                 },
                 "propellant": {
-                    "mass": config.propellant_mass,
-                    "position": config.propellant_cg_position,
-                    "current_mass": config.propellant_mass
+                    "mass": config["mass_properties"]["propellant_mass"],
+                    "position": config["mass_properties"]["propellant_cg_position"],
+                    "current_mass": config["mass_properties"]["propellant_mass"]
                 },
                 "recovery": {
-                    "mass": config.recovery_system_mass,
-                    "position": config.recovery_system_position
+                    "mass": config["mass_properties"]["recovery_system_mass"],
+                    "position": config["mass_properties"]["recovery_system_cg_position"]
                 }
             }
         
@@ -189,9 +189,9 @@ class RocketStability:
             
         if self.stability_calibers < 0:
             return "unstable"
-        elif self.stability_calibers < config.min_caliber_stability:
+        elif self.stability_calibers < config["stability"]["min_caliber_stability"]:
             return "marginally stable"
-        elif self.stability_calibers > config.max_caliber_stability:
+        elif self.stability_calibers > config["stability"]["max_caliber_stability"]:
             return "overstable"
         else:
             return "stable"
@@ -203,7 +203,7 @@ class RocketStability:
             self.calculate_center_of_pressure()
         if self.stability_calibers is None:
             self.calculate_stability()
-        if hasattr(config, 'show_rocket_configuration') and config.show_rocket_configuration == "1D":
+        if hasattr(config, 'show_rocket_configuration') and config["visualisation"]["show_rocket_configuration"] == "1D":
             return self._plot_1d_stability()
         else:
             return self._plot_2d_stability(show_components)
@@ -231,23 +231,16 @@ class RocketStability:
     
     def _plot_2d_stability(self, show_components=True):
         fig, ax = plt.subplots(figsize=(12, 4))
-        
-        # Draw the rocket outline
         self._draw_rocket_2d(ax)
-        
-        # Draw component CGs if requested
-        if show_components and config.show_component_cgs:
+        if show_components and config["visualisation"]["show_component_cgs"]:
             self._draw_component_cgs(ax)
         
-        # Mark the center of mass and center of pressure
         ax.plot(self.center_of_mass, 0, 'bo', markersize=10, label='Center of Mass')
         ax.plot(self.center_of_pressure, 0, 'ro', markersize=10, label='Center of Pressure')
         
-        # Draw stability margin if enabled
-        if config.show_stability_margin:
+        if config["visualisation"]["show_stability_margin"]:
             self._draw_stability_margin(ax)
         
-        # Add stability information
         stability_status = self.get_stability_status()
         info_text = (f"Stability Margin: {self.stability_margin:.3f} m\n"
                     f"Stability: {self.stability_calibers:.2f} calibers\n"
@@ -255,9 +248,9 @@ class RocketStability:
                     
         if self.stability_calibers < 0:
             info_color = 'red'
-        elif self.stability_calibers < config.min_caliber_stability:
+        elif self.stability_calibers < config["stability"]["min_caliber_stability"]:
             info_color = 'orange'
-        elif self.stability_calibers > config.max_caliber_stability:
+        elif self.stability_calibers > config["stability"]["max_caliber_stability"]:
             info_color = 'orange'
         else:
             info_color = 'green'
@@ -267,16 +260,12 @@ class RocketStability:
                 bbox=dict(facecolor='white', alpha=0.7, boxstyle='round'),
                 color=info_color)
         
-        # Set limits and labels
         ax.set_xlim(-0.1, self.length * 1.1)
         ax.set_ylim(-self.diameter * 1.5, self.diameter * 1.5)
         ax.set_xlabel('Distance from Nose Tip (m)')
         ax.set_title('Rocket Stability Diagram')
         ax.legend(loc='lower right')
-        
-        # Equal aspect ratio for realistic appearance
         ax.set_aspect('equal')
-        
         plt.tight_layout()
         return fig, ax
         
@@ -403,7 +392,7 @@ def plot_rocket_stability(rocket_fin=None, current_mass=None, mach=None):
     stability.calculate_stability()
     show_components = True
     if hasattr(config, 'show_component_cgs'):
-        show_components = config.show_component_cgs
+        show_components = config["visualisation"]["show_component_cgs"]
     
     fig, ax = stability.plot_stability_diagram(show_components=show_components)
     
@@ -420,7 +409,7 @@ def main():
     
     fin = RocketFin()
     fin.calculate_fin_dimensions(verbose=True)
-    propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config.propellant_mass)
+    propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config["mass_properties"]["propellant_mass"])
     print("\nStability with full propellant load:")
     fig, ax = plot_rocket_stability(
         rocket_fin=fin,

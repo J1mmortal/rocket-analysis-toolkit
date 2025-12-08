@@ -59,7 +59,7 @@ class ComponentData:
                     print(f"Error loading {file_path}: {e}")
         
         if self.calculated_fin_mass is not None:
-            self.add_calculated_fin_mass(self.calculated_fin_mass, config.fin_set_cg_position)
+            self.add_calculated_fin_mass(self.calculated_fin_mass, config["mass_properties"]["fin_set_cg_position"])
         
         if components_loaded > 0:
             print(f"Successfully loaded {components_loaded} components from team data files")

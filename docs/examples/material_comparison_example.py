@@ -31,7 +31,7 @@ def compare_fin_materials_for_flight(fast_mode=True):
     
     if not hasattr(config, 'max_q') or config["rocket"]["max_q"] <= 0:
         print("Running initial simulation to determine dynamic pressure parameters...")
-        from component_manager import ComponentData
+        from src.rocket_toolkit.geometry.component_manager import ComponentData
         component_manager = ComponentData()
         component_manager.update_from_team_files()
         component_manager.update_config(config)
