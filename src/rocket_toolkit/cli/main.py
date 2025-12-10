@@ -65,6 +65,129 @@ def configure_settings():
     save_config(config)
     print("Configuration updated!")
 
+def add_new_material():
+    config = load_config()
+    materials = config.get("materials", {})
+
+    print("\n=== Add New Material ===")
+    name = input("Material name (e.g. 'My Fancy Alloy'): ").strip()
+    if not name:
+        print("No name entered, aborting.")
+        return
+    if name in materials:
+        overwrite = input("Material already exists. Overwrite? (y/N): ").strip().lower()
+        if overwrite not in ("y", "yes"):
+            print("Aborting, existing material kept.")
+            return
+
+    def ask_float(prompt, default=None):
+        while True:
+            if default is not None:
+                text = input(f"{prompt} [{default}]: ").strip()
+                if text == "":
+                    return default
+            else:
+                text = input(f"{prompt}: ").strip()
+            try:
+                return float(text)
+            except ValueError:
+                print("Please enter a numeric value.")
+
+    print("\nEnter material properties (SI units):")
+    thermal_conductivity = ask_float("Thermal conductivity (W/m·K)")
+    density = ask_float("Density (kg/m³)")
+    specific_heat = ask_float("Specific heat (J/kg·K)")
+    max_service_temp = ask_float("Max service temperature (K)")
+    yield_strength = ask_float("Yield strength (MPa)")
+    thermal_expansion = ask_float("Thermal expansion (1/K)")
+    emissivity = ask_float("Emissivity (0-1)")
+
+    materials[name] = {
+        "thermal_conductivity": thermal_conductivity,
+        "density": density,
+        "specific_heat": specific_heat,
+        "max_service_temp": max_service_temp,
+        "yield_strength": yield_strength,
+        "thermal_expansion": thermal_expansion,
+        "emissivity": emissivity,
+    }
+
+    config["materials"] = materials
+    save_config(config)
+    print(f"\nMaterial '{name}' added/updated successfully.")
+
+def apply_preset_menu():
+    config = load_config()
+    presets = config.get("presets", {})
+    if not presets:
+        print("\nNo presets defined in config.json under 'presets'.")
+        return
+
+    print("\n=== Available Rocket Presets ===")
+    names = list(presets.keys())
+    for i, name in enumerate(names, 1):
+        print(f"{i}. {name}")
+    print(f"{len(names)+1}. Cancel")
+    choice = input("\nSelect preset to apply: ").strip()
+    try:
+        idx = int(choice)
+    except ValueError:
+        print("Invalid choice.")
+        return
+    if idx < 1 or idx > len(names) + 1:
+        print("Choice out of range.")
+        return
+    if idx == len(names) + 1:
+        print("Cancelled.")
+        return
+
+    preset_name = names[idx - 1]
+    preset = presets[preset_name]
+    print(f"\nApplying preset: {preset_name}")
+    confirm = input("This will overwrite current rocket-related settings. Continue? (y/N): ").strip().lower()
+    if confirm not in ("y", "yes"):
+        print("Aborted.")
+        return
+
+    apply_preset_to_config(config, preset)
+    save_config(config)
+    print(f"Preset '{preset_name}' applied and saved.")
+
+def apply_preset_to_config(config, preset):
+    for section, values in preset.items():
+        if isinstance(values, dict):
+            base_section = config.get(section, {})
+            if not isinstance(base_section, dict):
+                base_section = {}
+            for key, val in values.items():
+                base_section[key] = val
+            config[section] = base_section
+        else:
+            config[section] = values
+
+
+def settings_and_materials_menu():
+    while True:
+        print("\n===== Settings & Materials =====")
+        print("1. Configure config settings")
+        print("2. Add new material")
+        print("3. Apply rocket preset")
+        print("4. Return to main menu")
+
+        sub_choice = input("\nEnter choice (1-4): ").strip()
+
+        if sub_choice == '1':
+            configure_settings()
+        elif sub_choice == '2':
+            add_new_material()
+        elif sub_choice == '3':
+            apply_preset_menu()
+        elif sub_choice == '4':
+            break
+        else:
+            print("Invalid choice, please enter 1–4.")
+
+
 def get_fin_material():
     with open(CONFIG_FILE) as f:
         config = json.load(f)
@@ -1238,7 +1361,7 @@ def main_menu():
         elif choice == '8':
             manage_team_data()
         elif choice == '9':
-            configure_settings()
+            settings_and_materials_menu()
         elif choice == '0': 
             plt.close('all')
             print("Exiting...")
