@@ -163,7 +163,8 @@ class ComponentData:
         
     def print_component_summary(self):
         if not self.has_loaded_data or not self.components:
-            self.update_from_team_files()
+            print("\nNo component data loaded. Please use 'Load team data from files' first.")
+            return
         
         print("\nRocket Component Summary:")
         print(f"{'Component':<20} {'Mass (kg)':<10} {'Position (m)':<15} {'Team':<15}")

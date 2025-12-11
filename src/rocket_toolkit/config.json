@@ -20,35 +20,35 @@
     "q0": 0
   },
   "engine": {
-    "isp_sea": 235,
-    "isp_vac": 300,
-    "fuel_flow_rate": 4.4
+    "isp_sea": 210,
+    "isp_vac": 260,
+    "fuel_flow_rate": 1.0
   },
   "rocket": {
-    "drag_coefficient": 0.5,
-    "max_q": 82800,
-    "length": 2.5,
-    "diameter": 0.5,
-    "nose_cone_shape": "ogive",
-    "nose_cone_length": 0.3
+    "drag_coefficient": 0.6,
+    "max_q": 30000,
+    "length": 1.2,
+    "diameter": 0.2,
+    "nose_cone_shape": "conical",
+    "nose_cone_length": 0.2
   },
   "mass_properties": {
-    "nose_cone_mass": 0.7,
-    "nose_cone_cg_position": 0.15,
-    "fuselage_mass": 1.2,
-    "fuselage_cg_position": 1.2,
-    "nozzle_mass": 0.6,
-    "nozzle_cg_position": 2.4,
-    "engine_mass": 0.8,
-    "engine_cg_position": 2.3,
-    "fin_set_cg_position": 2.1,
-    "propellant_mass": 800,
-    "propellant_cg_position": 1.9,
-    "recovery_system_mass": 0.4,
-    "recovery_system_cg_position": 0.9
+    "nose_cone_mass": 0.2,
+    "nose_cone_cg_position": 0.08,
+    "fuselage_mass": 0.5,
+    "fuselage_cg_position": 0.6,
+    "nozzle_mass": 0.2,
+    "nozzle_cg_position": 1.1,
+    "engine_mass": 0.3,
+    "engine_cg_position": 1.0,
+    "fin_set_cg_position": 0.95,
+    "propellant_mass": 50,
+    "propellant_cg_position": 0.8,
+    "recovery_system_mass": 0.15,
+    "recovery_system_cg_position": 0.4
   },
   "fin_analysis": {
-    "fin_material": "Titanium Ti-6Al-4V",
+    "fin_material": "Aluminum 6061-T6",
     "create_temperature_animation": false,
     "animation_frames": 120
   },

@@ -22,7 +22,7 @@ EDITABLE_KEYS = {"paths": ["team_data", "output"],
                  "engine": ["isp_sea", "isp_vac", "fuel_flow_rate"],
                  "rocket": ["rocket_radius", "drag_coefficient", "max_q"]}
 
-
+component_manager = None
 
 def load_config():
     global config
@@ -198,9 +198,13 @@ def save_config(config):
         json.dump(config, f, indent=2)
 
 def bootstrap():
+    global component_manager
     config = load_config()
     paths = config.get("paths", {})
     updated = False
+    
+    if component_manager is None:
+        component_manager = ComponentData()
 
     for folder_key in ["team_data", "output"]:
         folder_path = paths.get(folder_key, f"./{folder_key.capitalize()}")
@@ -1164,38 +1168,43 @@ def run_stability_analysis(flight_stage=None):
     print(f"Stability analysis completed in {stability_time:.3f} seconds")
 
 def manage_team_data():
-    management_start = time.time()
-    component_manager = ComponentData()
+    global component_manager
+    if component_manager is None:
+        component_manager = ComponentData()
     
-    print("\nComponent Data Management:")
-    print("1. Create template files for teams")
-    print("2. Load team data from files")
-    print("3. Show component summary")
-    print("4. Exit")
-    
-    choice = input("\nEnter choice (1-4): ")
-    
-    if choice == '1':
-        template_start = time.time()
-        component_manager.create_all_templates()
-        template_time = time.time() - template_start
-        print(f"\nTemplate files created in {template_time:.3f} seconds")
-        print("Distribute these files to the respective teams to fill in their component data")
-    elif choice == '2':
-        load_start = time.time()
-        component_manager.update_from_team_files()
-        component_manager.update_config(config)
-        load_time = time.time() - load_start
-        print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
-    elif choice == '3':
-        summary_start = time.time()
-        component_manager.print_component_summary()
-        summary_time = time.time() - summary_start
-        print(f"Summary generated in {summary_time:.4f} seconds")
-    elif choice == '4':
-        print("Exiting...")
-    else:
-        print("Invalid choice")
+    while True:
+        management_start = time.time()
+        
+        print("\nComponent Data Management:")
+        print("1. Create template files for teams")
+        print("2. Load team data from files")
+        print("3. Show component summary")
+        print("4. Exit")
+        
+        choice = input("\nEnter choice (1-4): ")
+        
+        if choice == '1':
+            template_start = time.time()
+            component_manager.create_all_templates()
+            template_time = time.time() - template_start
+            print(f"\nTemplate files created in {template_time:.3f} seconds")
+            print("Distribute these files to the respective teams to fill in their component data")
+        elif choice == '2':
+            load_start = time.time()
+            component_manager.update_from_team_files()
+            component_manager.update_config(config)
+            load_time = time.time() - load_start
+            print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
+        elif choice == '3':
+            summary_start = time.time()
+            component_manager.print_component_summary()
+            summary_time = time.time() - summary_start
+            print(f"Summary generated in {summary_time:.4f} seconds")
+        elif choice == '4':
+            print("Exiting...")
+            break
+        else:
+            print("Invalid choice")
     
     management_time = time.time() - management_start
     print(f"Team data management completed in {management_time:.3f} seconds")
