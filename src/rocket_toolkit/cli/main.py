@@ -1018,6 +1018,13 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     total_time = time.time() - analysis_start
     print(f"Complete analysis finished in {total_time:.3f} seconds (simulation: {sim_time:.3f}s)")
 
+def set_default_fin_material(name: str) -> None:
+    config = load_config()
+    if "fin_analysis" not in config:
+        config["fin_analysis"] = {}
+    config["fin_analysis"]["fin_material"] = name
+    save_config(config)
+
 def run_material_comparison(fast_mode=True):
 
     comparison_start = time.time()
@@ -1051,6 +1058,14 @@ def run_material_comparison(fast_mode=True):
     best_material = next((r["Material"] for r in results if r["Within Limits"]), None)
     if best_material:
         print(f"\nRecommended material: {best_material}")
+        if fast_mode:
+            print("\nNote: You are in FAST comparison mode.")
+            print("Updating the default material to this recommendation does NOT guarantee it is truly optimal.")
+            print("For a more reliable choice, run the detailed material comparison before committing.")
+        update_input = input("\nSet this recommended material as the default fin material in config.json? (y/n): ")
+        if update_input.lower() == 'y':
+            set_default_fin_material(best_material)
+            print(f"Default fin material updated to: {best_material}")
         if not fast_mode:
             user_input = input("\nRun detailed analysis for the recommended material? (y/n): ")
             if user_input.lower() == 'y':
@@ -1060,10 +1075,21 @@ def run_material_comparison(fast_mode=True):
         results.sort(key=lambda x: -x["Temperature Margin (K)"])
         least_bad_material = results[0]["Material"]
         print(f"Least problematic material: {least_bad_material}")
+    
+        if fast_mode:
+            print("\nNote: You are in FAST comparison mode.")
+            print("Updating the default material to this recommendation does NOT guarantee it is truly optimal.")
+            print("For a more reliable choice, run the detailed material comparison before committing.")
+        update_input = input("\nSet this least problematic material as the default fin material in config.json? (y/n): ")
+        if update_input.lower() == 'y':
+            set_default_fin_material(least_bad_material)
+            print(f"Default fin material updated to: {least_bad_material}")
+    
         if not fast_mode:
             user_input = input("\nRun detailed analysis for this material? (y/n): ")
             if user_input.lower() == 'y':
                 run_single_material_analysis(least_bad_material, fast_mode=False)
+
 
     flight_simulator.clear_simulation_caches()
     comparison_time = time.time() - comparison_start
