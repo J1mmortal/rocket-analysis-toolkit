@@ -141,25 +141,52 @@ class ComponentData:
         return self.components
     
     def update_config(self, config):
-        # Mass sums
-        dry_mass = 0
-        propellant_mass = 0
+        cfg_components = config.get("components", {})
+        if not isinstance(cfg_components, dict):
+            cfg_components = {}
     
+        dry_mass = 0.0
+        propellant_mass = 0.0
         for name, data in self.components.items():
-            mass = data.get('mass', 0)
-            position = data.get('position', 0)
-            config[name + "_mass"] = mass
-            config[name + "_cg_position"] = position
+            mass = data.get("mass", 0.0)
+            position = data.get("position", 0.0)
+            team = data.get("team", "N/A")
+            description = data.get("description", "")
+            if mass <= 0:
+                continue
+            if name.lower() in ("fins", "fin"):
+                continue
+            cfg_components[name] = {
+                "mass": mass,
+                "position": position,
+                "team": team,
+                "description": description,
+            }
     
+        existing_components = config.get("components", {})
+        for name, data in existing_components.items():
+            if name not in cfg_components:
+                cfg_components[name] = data
+        for name, data in cfg_components.items():
+            mass = data.get("mass", 0.0)
+            if mass <= 0:
+                continue
             if "propellant" in name.lower():
                 propellant_mass += mass
             else:
                 dry_mass += mass
     
+        config["components"] = cfg_components
         config["dry_mass"] = dry_mass
         config["propellant_mass"] = propellant_mass
         config["wet_mass"] = dry_mass + propellant_mass
-        print(f"Updated config: dry_weight = {dry_mass} kg (sum of all non-propellant components)")
+        print(
+            f"Updated config from team data: "
+            f"dry_mass = {dry_mass:.3f} kg, "
+            f"propellant_mass = {propellant_mass:.3f} kg, "
+            f"wet_mass = {dry_mass + propellant_mass:.3f} kg"
+        )
+
         
     def print_component_summary(self):
         if not self.has_loaded_data or not self.components:

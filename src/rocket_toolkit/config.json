@@ -3,15 +3,18 @@
     "team_data": "./Team_data",
     "output": "./output"
   },
+
   "earth_constants": {
     "gravitational_constant": 6.6743e-11,
     "mass_earth": 5.97219e+24,
     "earth_radius": 6378000
   },
+
   "pdf_output": {
     "enabled": true,
     "dpi": 300
   },
+
   "simulation": {
     "dt": 0.01,
     "after_top_reached": 10000,
@@ -19,48 +22,94 @@
     "h0": 0,
     "q0": 0
   },
+
   "engine": {
-    "isp_sea": 210,
-    "isp_vac": 260,
-    "fuel_flow_rate": 1.0
+    "isp_sea": 235,
+    "isp_vac": 300,
+    "fuel_flow_rate": 4.4
   },
+
   "rocket": {
-    "drag_coefficient": 0.6,
-    "max_q": 30000,
-    "length": 1.2,
-    "diameter": 0.2,
-    "nose_cone_shape": "conical",
-    "nose_cone_length": 0.2
+    "drag_coefficient": 0.5,
+    "max_q": 82800,
+    "length": 2.5,
+    "diameter": 0.5,
+    "nose_cone_shape": "ogive",
+    "nose_cone_length": 0.3
   },
+
   "mass_properties": {
-    "nose_cone_mass": 0.2,
-    "nose_cone_cg_position": 0.08,
-    "fuselage_mass": 0.5,
-    "fuselage_cg_position": 0.6,
-    "nozzle_mass": 0.2,
-    "nozzle_cg_position": 1.1,
-    "engine_mass": 0.3,
-    "engine_cg_position": 1.0,
-    "fin_set_cg_position": 0.95,
-    "propellant_mass": 50,
-    "propellant_cg_position": 0.8,
-    "recovery_system_mass": 0.15,
-    "recovery_system_cg_position": 0.4
+    "nose_cone_mass": 0.7,
+    "nose_cone_cg_position": 0.15,
+    "fuselage_mass": 1.2,
+    "fuselage_cg_position": 1.2,
+    "nozzle_mass": 0.6,
+    "nozzle_cg_position": 2.4,
+    "engine_mass": 0.8,
+    "engine_cg_position": 2.3,
+    "fin_set_cg_position": 2.1,
+    "propellant_mass": 800,
+    "propellant_cg_position": 1.9,
+    "recovery_system_mass": 0.4,
+    "recovery_system_cg_position": 0.9
   },
+
+  "components": {
+    "nose cone": {
+      "mass": 0.7,
+      "position": 0.15,
+      "team": "aero",
+      "description": "Nose cone structure"
+    },
+    "fuselage": {
+      "mass": 1.2,
+      "position": 1.2,
+      "team": "fuselage",
+      "description": "Main fuselage structure"
+    },
+    "nozzle": {
+      "mass": 0.6,
+      "position": 2.4,
+      "team": "nozzle",
+      "description": "Nozzle structure"
+    },
+    "engine": {
+      "mass": 0.8,
+      "position": 2.3,
+      "team": "nozzle",
+      "description": "Engine hardware (dry)"
+    },
+    "propellant": {
+      "mass": 800.0,
+      "position": 1.9,
+      "team": "fuselage",
+      "description": "Propellant mass (lumped)"
+    },
+    "recovery_system": {
+      "mass": 0.4,
+      "position": 0.9,
+      "team": "aero",
+      "description": "Recovery system (chutes, etc.)"
+    }
+  },
+
   "fin_analysis": {
-    "fin_material": "Aluminum 6061-T6",
+    "fin_material": "Titanium Ti-6Al-4V",
     "create_temperature_animation": false,
     "animation_frames": 120
   },
+
   "stability": {
     "min_caliber_stability": 1.5,
     "max_caliber_stability": 4.0
   },
+
   "visualisation": {
     "show_stability_margin": true,
     "show_component_cgs": true,
     "show_rocket_configuration": "2D"
   },
+
   "materials": {
     "Aluminum 6061-T6": {
       "thermal_conductivity": 167,
@@ -135,6 +184,7 @@
       "emissivity": 0.3
     }
   },
+
   "presets": {
     "Baseline Rocket": {
       "rocket": {
@@ -160,6 +210,44 @@
         "recovery_system_mass": 0.4,
         "recovery_system_cg_position": 0.9
       },
+      "components": {
+        "nose cone": {
+          "mass": 0.7,
+          "position": 0.15,
+          "team": "aero",
+          "description": "Nose cone structure"
+        },
+        "fuselage": {
+          "mass": 1.2,
+          "position": 1.2,
+          "team": "fuselage",
+          "description": "Main fuselage structure"
+        },
+        "nozzle": {
+          "mass": 0.6,
+          "position": 2.4,
+          "team": "nozzle",
+          "description": "Nozzle structure"
+        },
+        "engine": {
+          "mass": 0.8,
+          "position": 2.3,
+          "team": "nozzle",
+          "description": "Engine hardware (dry)"
+        },
+        "propellant": {
+          "mass": 800.0,
+          "position": 1.9,
+          "team": "fuselage",
+          "description": "Propellant mass (lumped)"
+        },
+        "recovery_system": {
+          "mass": 0.4,
+          "position": 0.9,
+          "team": "aero",
+          "description": "Recovery system (chutes, etc.)"
+        }
+      },
       "engine": {
         "isp_sea": 235,
         "isp_vac": 300,
@@ -169,6 +257,7 @@
         "fin_material": "Titanium Ti-6Al-4V"
       }
     },
+
     "Small Test Rocket": {
       "rocket": {
         "length": 1.2,
@@ -188,10 +277,48 @@
         "engine_mass": 0.3,
         "engine_cg_position": 1.0,
         "fin_set_cg_position": 0.95,
-        "propellant_mass": 50,
+        "propellant_mass": 50.0,
         "propellant_cg_position": 0.8,
         "recovery_system_mass": 0.15,
         "recovery_system_cg_position": 0.4
+      },
+      "components": {
+        "nose cone": {
+          "mass": 0.2,
+          "position": 0.08,
+          "team": "aero",
+          "description": "Nose cone structure"
+        },
+        "fuselage": {
+          "mass": 0.5,
+          "position": 0.6,
+          "team": "fuselage",
+          "description": "Main fuselage structure"
+        },
+        "nozzle": {
+          "mass": 0.2,
+          "position": 1.1,
+          "team": "nozzle",
+          "description": "Nozzle structure"
+        },
+        "engine": {
+          "mass": 0.3,
+          "position": 1.0,
+          "team": "nozzle",
+          "description": "Engine hardware (dry)"
+        },
+        "propellant": {
+          "mass": 50.0,
+          "position": 0.8,
+          "team": "fuselage",
+          "description": "Propellant mass (lumped)"
+        },
+        "recovery_system": {
+          "mass": 0.15,
+          "position": 0.4,
+          "team": "aero",
+          "description": "Recovery system (chutes, etc.)"
+        }
       },
       "engine": {
         "isp_sea": 210,
@@ -202,6 +329,7 @@
         "fin_material": "Aluminum 6061-T6"
       }
     },
+
     "DC-X (approx)": {
       "rocket": {
         "length": 12.0,
@@ -226,6 +354,44 @@
         "recovery_system_mass": 0.0,
         "recovery_system_cg_position": 2.0
       },
+      "components": {
+        "nose cone": {
+          "mass": 500.0,
+          "position": 2.0,
+          "team": "aero",
+          "description": "Nose cone structure"
+        },
+        "fuselage": {
+          "mass": 3600.0,
+          "position": 6.0,
+          "team": "fuselage",
+          "description": "Main fuselage and tank structure"
+        },
+        "nozzle": {
+          "mass": 800.0,
+          "position": 11.5,
+          "team": "nozzle",
+          "description": "Nozzle structure"
+        },
+        "engine": {
+          "mass": 4200.0,
+          "position": 11.0,
+          "team": "nozzle",
+          "description": "Cluster of engines and base hardware"
+        },
+        "propellant": {
+          "mass": 9800.0,
+          "position": 7.0,
+          "team": "fuselage",
+          "description": "Propellant mass (lumped)"
+        },
+        "recovery_system": {
+          "mass": 0.0,
+          "position": 2.0,
+          "team": "aero",
+          "description": "Recovery system (not modeled)"
+        }
+      },
       "engine": {
         "isp_sea": 300,
         "isp_vac": 430,
@@ -236,5 +402,6 @@
       }
     }
   },
+
   "settings": {}
 }
