@@ -154,7 +154,18 @@ def apply_preset_menu():
     print(f"Preset '{preset_name}' applied and saved.")
 
 def apply_preset_to_config(config, preset):
+    components_from_preset = preset.get("components", {})
+    if isinstance(components_from_preset, dict):
+        config["components"] = {}
+        for name, data in components_from_preset.items():
+            config["components"][name] = dict(data)  # shallow copy
+    else:
+        config["components"] = {}
+
     for section, values in preset.items():
+        if section == "components":
+            continue  # already handled above
+
         if isinstance(values, dict):
             base_section = config.get(section, {})
             if not isinstance(base_section, dict):
@@ -164,7 +175,6 @@ def apply_preset_to_config(config, preset):
             config[section] = base_section
         else:
             config[section] = values
-
 
 def settings_and_materials_menu():
     while True:
@@ -232,6 +242,7 @@ def load_team_data():
     component_manager = ComponentData()
     component_manager.update_from_team_files()
     component_manager.update_config(config)
+    save_config(config)
     
     load_time = time.time() - load_start
     print(f"Team data loaded in {load_time:.3f} seconds")
@@ -344,9 +355,22 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
         content.append(f"{'Total Mass':<25} {total_dry_mass + propellant_mass:<12.3f}")
         content.append(f"{'Mass Ratio':<25} {(total_dry_mass + propellant_mass) / total_dry_mass if total_dry_mass > 0 else 0:<12.3f}")
     else:
-        content.append("Using legacy config values:")
-        content.append(f"{'Dry Weight':<25} {config.dry_weight:<12.3f} kg")
-        content.append(f"{'Propellant Mass':<25} {config["mass_properties"]["propellant_mass"]:<12.3f} kg")
+        content.append("Using config component values:")
+        components = config.get("components", {})
+        total_dry_mass = 0.0
+        propellant_mass = 0.0
+        for name, data in components.items():
+            mass = data.get("mass", 0.0)
+            if mass <= 0:
+                continue
+            if "propellant" in name.lower():
+                propellant_mass += mass
+            else:
+                total_dry_mass += mass
+        content.append(f"{'Total Dry Mass':<25} {total_dry_mass:<12.3f}")
+        content.append(f"{'Total Propellant':<25} {propellant_mass:<12.3f}")
+        content.append(f"{'Total Mass':<25} {total_dry_mass + propellant_mass:<12.3f}")
+
     
     content.append("")
     
@@ -894,10 +918,7 @@ def create_material_comparison_pdf(output_path, results, fast_mode=False, compon
             plt.close(fig_conditions)
 
 def run_single_material_analysis(material_name=None, fast_mode=True):
-    analysis_start = time.time()
-    
-    component_manager = load_team_data()
-    
+    analysis_start = time.time()    
     if material_name is None:
         material_name = config["fin_analysis"]["fin_material"]
     
@@ -1000,7 +1021,6 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
 def run_material_comparison(fast_mode=True):
 
     comparison_start = time.time()
-    component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
     
     print("\nRunning material comparison for all available materials...")
@@ -1050,9 +1070,7 @@ def run_material_comparison(fast_mode=True):
     print(f"Material comparison completed in {comparison_time:.3f} seconds")
 
 def run_stability_analysis(flight_stage=None):
-    stability_start = time.time()
-    component_manager = load_team_data()
-    
+    stability_start = time.time()    
     fin_init_start = time.time()
     fin_material = get_fin_material()
     fin = RocketFin(material_name=fin_material)
@@ -1167,6 +1185,48 @@ def run_stability_analysis(flight_stage=None):
     stability_time = time.time() - stability_start
     print(f"Stability analysis completed in {stability_time:.3f} seconds")
 
+def print_config_mass_summary():
+    cfg = load_config()
+    components = cfg.get("components", {})
+
+    if not components:
+        print("\nNo components defined in config['components'].")
+        print("Apply a preset or load team data first.")
+        return
+
+    print("\nConfig Component Summary (presets + team data):")
+    print(f"{'Component':<20} {'Mass (kg)':<10} {'Position (m)':<15} {'Team':<15}")
+    print("-" * 60)
+
+    total_dry_mass = 0.0
+    propellant_mass = 0.0
+
+    def sort_key(item):
+        name = item[0].lower()
+        if "propellant" in name:
+            return (0, name)
+        else:
+            return (1, name)
+
+    for name, data in sorted(components.items(), key=sort_key):
+        mass = data.get("mass", 0.0)
+        position = data.get("position", 0.0)
+        team = data.get("team", "N/A")
+        if mass <= 0:
+            continue
+        if "propellant" in name.lower():
+            propellant_mass += mass
+        else:
+            total_dry_mass += mass
+        print(f"{name:<20} {mass:<10.3f} {position:<15.3f} {team:<15}")
+
+    total_mass = total_dry_mass + propellant_mass
+    print("-" * 60)
+    print(f"{'Dry mass':<20} {total_dry_mass:<10.3f}")
+    print(f"{'Propellant':<20} {propellant_mass:<10.3f}")
+    print(f"{'Total':<20} {total_mass:<10.3f}")
+
+
 def manage_team_data():
     global component_manager
     if component_manager is None:
@@ -1178,10 +1238,11 @@ def manage_team_data():
         print("\nComponent Data Management:")
         print("1. Create template files for teams")
         print("2. Load team data from files")
-        print("3. Show component summary")
-        print("4. Exit")
+        print("3. Show team-data component summary")
+        print("4. Show config (merged) component summary")
+        print("5. Exit")
         
-        choice = input("\nEnter choice (1-4): ")
+        choice = input("\nEnter choice (1-5): ")
         
         if choice == '1':
             template_start = time.time()
@@ -1193,6 +1254,7 @@ def manage_team_data():
             load_start = time.time()
             component_manager.update_from_team_files()
             component_manager.update_config(config)
+            save_config(config)
             load_time = time.time() - load_start
             print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
         elif choice == '3':
@@ -1201,6 +1263,11 @@ def manage_team_data():
             summary_time = time.time() - summary_start
             print(f"Summary generated in {summary_time:.4f} seconds")
         elif choice == '4':
+            summary_start = time.time()
+            print_config_mass_summary()
+            summary_time = time.time() - summary_start
+            print(f"Summary generated in {summary_time:.4f} seconds")
+        elif choice == '5':
             print("Exiting...")
             break
         else:
@@ -1215,7 +1282,6 @@ def run_trajectory_optimization():
     
     print("\nRunning trajectory optimization analysis...")
     
-    component_manager = load_team_data()
     flight_simulator.component_manager = component_manager
     print("Simulating current configuration...")
     sim_start = time.time()

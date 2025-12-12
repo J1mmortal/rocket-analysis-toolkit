@@ -31,12 +31,14 @@ def compare_fin_materials_for_flight(fast_mode=True):
     
     if not hasattr(config, 'max_q') or config["rocket"]["max_q"] <= 0:
         print("Running initial simulation to determine dynamic pressure parameters...")
+        '''
         from src.rocket_toolkit.geometry.component_manager import ComponentData
         component_manager = ComponentData()
         component_manager.update_from_team_files()
         component_manager.update_config(config)
         
         flight_simulator.component_manager = component_manager
+        '''
         flight_simulator.main(material_name="Titanium Ti-6Al-4V", fast_mode=True, skip_animation=True)
         print(f"Initial simulation completed. Maximum dynamic pressure: {config["rocket"]["max_q"]:.1f} Pa")
     

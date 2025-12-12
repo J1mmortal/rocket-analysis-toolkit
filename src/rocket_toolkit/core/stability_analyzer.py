@@ -14,7 +14,7 @@ class RocketStability:
     def __init__(self):
         # Load component data from teams if available
         self.component_manager = ComponentData()
-        self.component_manager.update_from_team_files()
+        #self.component_manager.update_from_team_files()
         self.components = self.component_manager.get_component_data()
         self.length = config["rocket"]["length"]
         self.diameter = config["rocket"]["diameter"]
@@ -401,12 +401,12 @@ def plot_rocket_stability(rocket_fin=None, current_mass=None, mach=None):
 def main():
     from rocket_fin_dimensions import RocketFin
     from component_manager import ComponentData
-    
     component_manager = ComponentData()
+    '''
     component_manager.update_from_team_files()
     component_manager.update_config(config)
     component_manager.print_component_summary()
-    
+    '''
     fin = RocketFin()
     fin.calculate_fin_dimensions(verbose=True)
     propellant_mass = component_manager.get_component_data().get("propellant", {}).get("mass", config["mass_properties"]["propellant_mass"])

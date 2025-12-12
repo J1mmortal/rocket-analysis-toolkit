@@ -3,18 +3,15 @@
     "team_data": "./Team_data",
     "output": "./output"
   },
-
   "earth_constants": {
     "gravitational_constant": 6.6743e-11,
     "mass_earth": 5.97219e+24,
     "earth_radius": 6378000
   },
-
   "pdf_output": {
     "enabled": true,
     "dpi": 300
   },
-
   "simulation": {
     "dt": 0.01,
     "after_top_reached": 10000,
@@ -22,13 +19,11 @@
     "h0": 0,
     "q0": 0
   },
-
   "engine": {
     "isp_sea": 235,
     "isp_vac": 300,
     "fuel_flow_rate": 4.4
   },
-
   "rocket": {
     "drag_coefficient": 0.5,
     "max_q": 82800,
@@ -37,7 +32,6 @@
     "nose_cone_shape": "ogive",
     "nose_cone_length": 0.3
   },
-
   "mass_properties": {
     "nose_cone_mass": 0.7,
     "nose_cone_cg_position": 0.15,
@@ -53,63 +47,64 @@
     "recovery_system_mass": 0.4,
     "recovery_system_cg_position": 0.9
   },
-
   "components": {
     "nose cone": {
-      "mass": 0.7,
-      "position": 0.15,
+      "mass": 10.23,
+      "position": 0.45,
       "team": "aero",
-      "description": "Nose cone structure"
+      "description": "nose cone"
     },
-    "fuselage": {
-      "mass": 1.2,
-      "position": 1.2,
+    "fuselage_oxi": {
+      "mass": 55.33,
+      "position": 4.5,
       "team": "fuselage",
-      "description": "Main fuselage structure"
-    },
-    "nozzle": {
-      "mass": 0.6,
-      "position": 2.4,
-      "team": "nozzle",
-      "description": "Nozzle structure"
-    },
-    "engine": {
-      "mass": 0.8,
-      "position": 2.3,
-      "team": "nozzle",
-      "description": "Engine hardware (dry)"
+      "description": "oxidant fuselage"
     },
     "propellant": {
-      "mass": 800.0,
-      "position": 1.9,
+      "mass": 244.08,
+      "position": 3,
       "team": "fuselage",
-      "description": "Propellant mass (lumped)"
+      "description": "propellant from fuel and oxidator together"
     },
-    "recovery_system": {
-      "mass": 0.4,
-      "position": 0.9,
-      "team": "aero",
-      "description": "Recovery system (chutes, etc.)"
+    "helium_tank": {
+      "mass": 43.5,
+      "position": 1.4,
+      "team": "fuselage",
+      "description": "helium tank"
+    },
+    "fuselage_shell": {
+      "mass": 60.25,
+      "position": 4,
+      "team": "fuselage",
+      "description": "surrounding shell around components"
+    },
+    "combustion_chamber": {
+      "mass": 12.83,
+      "position": 5.5,
+      "team": "fuselage",
+      "description": "combustion chamber"
+    },
+    "nozzle": {
+      "mass": 7.993,
+      "position": 7.3495,
+      "team": "nozzle",
+      "description": "nozzle structure"
     }
   },
-
   "fin_analysis": {
     "fin_material": "Titanium Ti-6Al-4V",
     "create_temperature_animation": false,
     "animation_frames": 120
   },
-
   "stability": {
     "min_caliber_stability": 1.5,
     "max_caliber_stability": 4.0
   },
-
   "visualisation": {
     "show_stability_margin": true,
     "show_component_cgs": true,
     "show_rocket_configuration": "2D"
   },
-
   "materials": {
     "Aluminum 6061-T6": {
       "thermal_conductivity": 167,
@@ -184,80 +179,84 @@
       "emissivity": 0.3
     }
   },
-
   "presets": {
     "Baseline Rocket": {
       "rocket": {
-        "length": 2.5,
+        "length": 7.35,
         "diameter": 0.5,
         "nose_cone_shape": "ogive",
-        "nose_cone_length": 0.3,
+        "nose_cone_length": 0.45,
         "drag_coefficient": 0.5,
         "max_q": 82800
       },
       "mass_properties": {
-        "nose_cone_mass": 0.7,
-        "nose_cone_cg_position": 0.15,
-        "fuselage_mass": 1.2,
-        "fuselage_cg_position": 1.2,
-        "nozzle_mass": 0.6,
-        "nozzle_cg_position": 2.4,
-        "engine_mass": 0.8,
-        "engine_cg_position": 2.3,
-        "fin_set_cg_position": 2.1,
-        "propellant_mass": 800,
-        "propellant_cg_position": 1.9,
-        "recovery_system_mass": 0.4,
+        "nose_cone_mass": 10.23,
+        "nose_cone_cg_position": 0.45,
+        "fuselage_mass": 171.91,
+        "fuselage_cg_position": 4.0,
+        "nozzle_mass": 7.993,
+        "nozzle_cg_position": 7.3495,
+        "engine_mass": 0.0,
+        "engine_cg_position": 7.0,
+        "fin_set_cg_position": 6.8,
+        "propellant_mass": 244.08,
+        "propellant_cg_position": 3.0,
+        "recovery_system_mass": 0.0,
         "recovery_system_cg_position": 0.9
       },
       "components": {
         "nose cone": {
-          "mass": 0.7,
-          "position": 0.15,
+          "mass": 10.23,
+          "position": 0.45,
           "team": "aero",
-          "description": "Nose cone structure"
+          "description": "nose cone"
         },
-        "fuselage": {
-          "mass": 1.2,
-          "position": 1.2,
+        "fuselage_oxi": {
+          "mass": 55.33,
+          "position": 4.5,
           "team": "fuselage",
-          "description": "Main fuselage structure"
-        },
-        "nozzle": {
-          "mass": 0.6,
-          "position": 2.4,
-          "team": "nozzle",
-          "description": "Nozzle structure"
-        },
-        "engine": {
-          "mass": 0.8,
-          "position": 2.3,
-          "team": "nozzle",
-          "description": "Engine hardware (dry)"
+          "description": "oxidant fuselage"
         },
         "propellant": {
-          "mass": 800.0,
-          "position": 1.9,
+          "mass": 244.08,
+          "position": 3.0,
           "team": "fuselage",
-          "description": "Propellant mass (lumped)"
+          "description": "propellant from fuel and oxidator together"
         },
-        "recovery_system": {
-          "mass": 0.4,
-          "position": 0.9,
-          "team": "aero",
-          "description": "Recovery system (chutes, etc.)"
+        "helium_tank": {
+          "mass": 43.5,
+          "position": 1.4,
+          "team": "fuselage",
+          "description": "helium tank"
+        },
+        "fuselage_shell": {
+          "mass": 60.25,
+          "position": 4.0,
+          "team": "fuselage",
+          "description": "surrounding shell around components"
+        },
+        "combustion_chamber": {
+          "mass": 12.83,
+          "position": 5.5,
+          "team": "fuselage",
+          "description": "combustion chamber"
+        },
+        "nozzle": {
+          "mass": 7.993,
+          "position": 7.3495,
+          "team": "nozzle",
+          "description": "nozzle structure"
         }
       },
       "engine": {
-        "isp_sea": 235,
-        "isp_vac": 300,
-        "fuel_flow_rate": 4.4
+        "isp_sea": 210,
+        "isp_vac": 260,
+        "fuel_flow_rate": 1.0
       },
       "fin_analysis": {
         "fin_material": "Titanium Ti-6Al-4V"
       }
     },
-
     "Small Test Rocket": {
       "rocket": {
         "length": 1.2,
@@ -329,7 +328,6 @@
         "fin_material": "Aluminum 6061-T6"
       }
     },
-
     "DC-X (approx)": {
       "rocket": {
         "length": 12.0,
@@ -402,6 +400,8 @@
       }
     }
   },
-
-  "settings": {}
+  "settings": {},
+  "dry_mass": 190.133,
+  "propellant_mass": 244.08,
+  "wet_mass": 434.213
 }

@@ -69,27 +69,33 @@ class earth_constants:
 def load_component_data():
     global component_manager
     if component_manager is None:
-        component_manager = ComponentData()
-    component_manager.update_from_team_files()
-    component_data = component_manager.get_component_data()
-    dry_weight = 0
-    propellant_mass = 0
-    
-    for name, data in component_data.items():
-        if "propellant" in name.lower():
-            propellant_mass += data["mass"]
-        else:
-            dry_weight += data["mass"]
-    
+        pass
+
+    dry_mass = config.get("dry_mass")
+    propellant_mass = config.get("propellant_mass")
+    if dry_mass is None or propellant_mass is None:
+        dry_mass = 0.0
+        propellant_mass = 0.0
+        components = config.get("components", {})
+        for name, data in components.items():
+            mass = data.get("mass", 0.0)
+            if mass <= 0:
+                continue
+            if "propellant" in name.lower():
+                propellant_mass += mass
+            else:
+                dry_mass += mass
+
     if propellant_mass == 0:
-        propellant_mass = config["mass_properties"]["propellant_mass"]
-        
-    min_realistic_dry_weight = 30  
-    if dry_weight < min_realistic_dry_weight:
-        print(f"WARNING: Dry weight of {dry_weight:.2f} kg is unrealistically low for this rocket!")
+        propellant_mass = config.get("mass_properties", {}).get("propellant_mass", 0.0)
+
+    min_realistic_dry_weight = 30.0
+    if dry_mass < min_realistic_dry_weight:
+        print(f"WARNING: Dry weight of {dry_mass:.2f} kg is unrealistically low for this rocket!")
         print("Consider increasing structural component masses for more realistic results.")
-    
-    return dry_weight, propellant_mass
+
+    return dry_mass, propellant_mass
+
 
 def altitude_adjusted_isp(r1, isp_sea, isp_vac):
     height = r1.altitude
