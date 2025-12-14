@@ -1,11 +1,10 @@
 import numpy as np
 import os
 import json
-from src.rocket_toolkit.models.atmosphere_model import AtmosphereModel
+from rocket_toolkit.models.atmosphere_model import AtmosphereModel
+from rocket_toolkit.config import load_config
 
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+config = load_config()
 
 class ThermalAnalysis:
     def __init__(self, rocket_fin):

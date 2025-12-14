@@ -2,12 +2,11 @@ import numpy as np
 import pandas as pd
 import os
 import json
-from src.rocket_toolkit.geometry.materials import MaterialsDatabase
+from rocket_toolkit.geometry.materials import MaterialsDatabase
 import time
+from rocket_toolkit.config import load_config
 
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+config = load_config()
 
 def get_team_data_path():
     current_dir = os.path.dirname(os.path.abspath(__file__))

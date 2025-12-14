@@ -1,15 +1,13 @@
 import json
 import os
+from rocket_toolkit.config import load_config
 
 class MaterialsDatabase:
-    def __init__(self, config_path=None):
-        if config_path is None:
-            config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-            config_path = os.path.abspath(config_path)
-        print("Loading materials from:", config_path)
-        with open(config_path, "r") as f:
-            config = json.load(f)
-        self.materials_db = config.get("materials", {})   
+    def __init__(self, cfg=None):
+        if cfg is None:
+            cfg = load_config()
+        print("Loading materials from shared config")
+        self.materials_db = cfg.get("materials", {})
         
     def get_material_properties(self, material_name):
         if material_name in self.materials_db:

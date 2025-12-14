@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-from src.rocket_toolkit.core.thermal_analyzer import ThermalAnalysis
-from src.rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.core.thermal_analyzer import ThermalAnalysis
+from rocket_toolkit.geometry.rocket_fin import RocketFin
 import pandas as pd
 import time
 

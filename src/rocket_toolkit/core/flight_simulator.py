@@ -4,13 +4,14 @@ from matplotlib.animation import FuncAnimation
 import os
 import json
 import time
-from src.rocket_toolkit.geometry.rocket_fin import RocketFin
-from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
-from src.rocket_toolkit.core.stability_analyzer import RocketStability
-from src.rocket_toolkit.geometry.component_manager import ComponentData
-from src.rocket_toolkit.plotting import fin_animation
-import src.rocket_toolkit.models.material_comparison_example
+from rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
+from rocket_toolkit.core.stability_analyzer import RocketStability
+from rocket_toolkit.geometry.component_manager import ComponentData
+from rocket_toolkit.plotting import fin_animation
+import rocket_toolkit.models.material_comparison_example
 import isacalc as isa
+from rocket_toolkit.config import load_config
 
 std_atm = isa.Atmosphere()
 
@@ -24,11 +25,7 @@ mesh_size = 20
 
 _cache = {}
 _atmosphere_cache = {}
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-
-def load_config_fs():
-    with open(config_path, 'r') as f:
-        return json.load(f)
+config = load_config()
 
 def get_cached_atmosphere(altitude):
     global _atmosphere_cache
@@ -163,7 +160,7 @@ def dynamic_pressure(r1):
 def init(material_name=None, fast_mode=False):
     init_start = time.time()
     global r, rc, ec, time_points, fin_tracker, component_manager, config
-    config = load_config_fs()
+    config = load_config()
     time_points = [0]
     dry_weight, propellant_mass = load_component_data()
     atm_data = get_cached_atmosphere(config["simulation"]["h0"])
@@ -553,7 +550,7 @@ def report(limit_reached):
     nose_cone_temps = np.array([i.nose_cone_temp for i in r])
     max_dynamic_pressure = np.max(dynamic_pressures)
     print(f"\nMaximum dynamic pressure encountered during flight: {max_dynamic_pressure:.1f} Pa")
-    print(f"Dynamic pressure used for fin sizing (fixed): {config["rocket"]["max_q"]:.1f} Pa")
+    print(f"Dynamic pressure used for fin sizing (fixed): {config['rocket']['max_q']:.1f} Pa")
         
     print('\nWith the following constants:')
     for key, value in vars(rc).items():

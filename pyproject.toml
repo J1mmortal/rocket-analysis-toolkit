@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+rocket_toolkit = ["default_config.json"]
+
+[project]
+name = "rocket_toolkit"
+version = "0.1.2"
+description = "Rocket analysis tools with interactive CLI menu"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Jesper Meijerink", email = "jnmeijerink@tudelft.nl" }]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "isacalc",
+]
+
+[project.urls]
+Homepage = "https://github.com/J1mmortal/rocket-analysis-toolkit"
+
+[project.scripts]
+rocket_toolkit = "rocket_toolkit.cli.main:main"

@@ -2,15 +2,13 @@ import numpy as np
 import os
 import json
 import matplotlib.pyplot as plt
-from src.rocket_toolkit.geometry.rocket_fin import RocketFin
-from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
-from src.rocket_toolkit.core import flight_simulator
+from rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
+from rocket_toolkit.core import flight_simulator
 import time
+from rocket_toolkit.config import load_config
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-config_path = os.path.join(project_root, 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+config = load_config()
 
 def compare_fin_materials_for_flight(fast_mode=True):
     start_time = time.time()
@@ -40,7 +38,7 @@ def compare_fin_materials_for_flight(fast_mode=True):
         flight_simulator.component_manager = component_manager
         '''
         flight_simulator.main(material_name="Titanium Ti-6Al-4V", fast_mode=True, skip_animation=True)
-        print(f"Initial simulation completed. Maximum dynamic pressure: {config["rocket"]["max_q"]:.1f} Pa")
+        print(f"Initial simulation completed. Maximum dynamic pressure: {config['rocket']['max_q']:.1f} Pa")
     
     rocket_fin.max_q = config["rocket"]["max_q"]
     print(f"Using dynamic pressure (max_q) for all material comparisons: {rocket_fin.max_q:.1f} Pa")

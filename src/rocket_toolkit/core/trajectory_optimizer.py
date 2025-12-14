@@ -3,13 +3,12 @@ import os
 import json
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
-from src.rocket_toolkit.geometry.component_manager import ComponentData
-from src.rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.geometry.component_manager import ComponentData
+from rocket_toolkit.geometry.rocket_fin import RocketFin
 import isacalc as isa
+from rocket_toolkit.config import load_config
 
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+config = load_config()
 
 class TrajectoryOptimizer:
     def __init__(self, target_altitude=100000):

@@ -1,17 +1,22 @@
 import json
 import os
+from rocket_toolkit.config import load_config
 
-config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+def get_paths():
+    cfg = load_config()
+    paths = cfg.get("paths", {})
+    base = os.getcwd()  # directory where user runs `rocket_toolkit`
+    team_data = os.path.abspath(os.path.join(base, paths.get("team_data", "Team_data")))
+    output = os.path.abspath(os.path.join(base, paths.get("output", "output")))
+    return team_data, output
 
 def get_team_data_path():
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    up_one = os.path.dirname(current_dir)
-    up_two = os.path.dirname(up_one)
-    project_root = os.path.dirname(up_two)
-    team_data_path = os.path.join(project_root, "Team_data")
-    return team_data_path
+    team_data, _ = get_paths()
+    return team_data
+
+def get_output_path():
+    _, output = get_paths()
+    return output
 
 class ComponentData:
     def __init__(self):

@@ -6,17 +6,21 @@ import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
-from src.rocket_toolkit.core import flight_simulator
-from src.rocket_toolkit.core import thermal_analyzer
-from src.rocket_toolkit.geometry.rocket_fin import RocketFin
-from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
-from src.rocket_toolkit.plotting.fin_animation import create_fin_temperature_animation
-from src.rocket_toolkit.core.stability_analyzer import RocketStability, plot_rocket_stability
-from src.rocket_toolkit.geometry.component_manager import ComponentData
-from src.rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
-from src.rocket_toolkit.models import material_comparison_example
+from importlib import resources
+from rocket_toolkit.core import flight_simulator
+from rocket_toolkit.core import thermal_analyzer
+from rocket_toolkit.geometry.rocket_fin import RocketFin
+from rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracker
+from rocket_toolkit.plotting.fin_animation import create_fin_temperature_animation
+from rocket_toolkit.core.stability_analyzer import RocketStability, plot_rocket_stability
+from rocket_toolkit.geometry.component_manager import ComponentData
+from rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
+from rocket_toolkit.models import material_comparison_example
+from rocket_toolkit.config import load_config, save_config, CONFIG_FILE
 
-CONFIG_FILE = "src/rocket_toolkit/config.json"
+
+CONFIG_FILE = os.path.join(os.getcwd(), "config.json")
+config = None
 EDITABLE_KEYS = {"paths": ["team_data", "output"], 
                  "simulation": ["v0", "h0", "q0"], 
                  "engine": ["isp_sea", "isp_vac", "fuel_flow_rate"],
@@ -24,23 +28,6 @@ EDITABLE_KEYS = {"paths": ["team_data", "output"],
 
 component_manager = None
 
-def load_config():
-    global config
-    if not os.path.exists(CONFIG_FILE):
-        default_config = {
-            "paths": {
-                "team_data": "./Team_data",
-                "output": "./output"
-            },
-        }
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(default_config, f, indent=2)
-        print("\nCant find config.json file, will load default config")
-        return default_config
-    with open(CONFIG_FILE) as f:
-        print("\nConfig file found succesfully")
-        config = json.load(f)
-        return config
 
 def configure_settings():
     config = load_config()
@@ -224,10 +211,6 @@ def get_fin_material():
         config = json.load(f)
     return config.get("fin_analysis", {}).get("fin_material", "Aluminum 6061-T6")
 
-def save_config(config):
-    with open(CONFIG_FILE, "w") as f:
-        json.dump(config, f, indent=2)
-
 def bootstrap():
     global component_manager
     config = load_config()
@@ -345,8 +328,8 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append(f"Fin Material:               {material_name}")
     content.append(f"Fast Mode:                  {fast_mode}")
-    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
-    content.append(f"After Top Reached:          {config["simulation"]["after_top_reached"]} cycles")
+    content.append(f"Time Step (dt):             {config['simulation']['dt']} s")
+    content.append(f"After Top Reached:          {config['simulation']['after_top_reached']} cycles")
     content.append(f"Animation Enabled:          {getattr(config, 'create_temperature_animation', False)}")
     content.append("")
     content.append("="*70)
@@ -401,42 +384,42 @@ def _create_flight_conditions_content(material_name=None, component_manager=None
     content.append("="*70)
     content.append("ROCKET GEOMETRY")
     content.append("="*70)
-    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', "NOT FOUND")} m")
-    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', "NOT FOUND")} m")
-    content.append(f"Rocket Radius:              {config["rocket"]["diameter"] / 2} m")
-    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', "NOT FOUND")} m")
+    content.append(f"Rocket Length:              {getattr(config, 'rocket_length', 'NOT FOUND')} m")
+    content.append(f"Rocket Diameter:            {getattr(config, 'rocket_diameter', 'NOT FOUND')} m")
+    content.append(f"Rocket Radius:              {config['rocket']['diameter'] / 2} m")
+    content.append(f"Nose Cone Length:           {getattr(config, 'nose_cone_length', 'NOT FOUND')} m")
     content.append(f"Nose Cone Shape:            {getattr(config, 'nose_cone_shape', 'ogive')}")
     content.append("")
     
     content.append("="*70)
     content.append("ENGINE PARAMETERS")
     content.append("="*70)
-    content.append(f"ISP Sea Level:              {config["engine"]["isp_sea"]} s")
-    content.append(f"ISP Vacuum:                 {config["engine"]["isp_vac"]} s")
-    content.append(f"Fuel Flow Rate:             {config["engine"]["fuel_flow_rate"]} kg/s")
+    content.append(f"ISP Sea Level:              {config['engine']['isp_sea']} s")
+    content.append(f"ISP Vacuum:                 {config['engine']['isp_vac']} s")
+    content.append(f"Fuel Flow Rate:             {config['engine']['fuel_flow_rate']} kg/s")
     content.append("")
     
     content.append("="*70)
     content.append("INITIAL CONDITIONS")
     content.append("="*70)
-    content.append(f"Initial Velocity:           {config["simulation"]["v0"]} m/s")
-    content.append(f"Initial Altitude:           {config["simulation"]["h0"]} m")
-    content.append(f"Initial Dynamic Pressure:   {config["simulation"]["q0"]} Pa")
+    content.append(f"Initial Velocity:           {config['simulation']['v0']} m/s")
+    content.append(f"Initial Altitude:           {config['simulation']['h0']} m")
+    content.append(f"Initial Dynamic Pressure:   {config['simulation']['q0']} Pa")
     content.append("")
     
     content.append("="*70)
     content.append("AERODYNAMIC PARAMETERS")
     content.append("="*70)
-    content.append(f"Drag Coefficient:           {config["rocket"]["drag_coefficient"]}")
-    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
+    content.append(f"Drag Coefficient:           {config['rocket']['drag_coefficient']}")
+    content.append(f"Max Dynamic Pressure:       {config['rocket']['max_q']} Pa")
     content.append("")
     
     content.append("="*70)
     content.append("EARTH CONSTANTS")
     content.append("="*70)
-    content.append(f"Gravitational Constant:     {config["earth_constants"]["gravitational_constant"]}")
-    content.append(f"Earth Mass:                 {config["earth_constants"]["mass_earth"]} kg")
-    content.append(f"Earth Radius:               {config["earth_constants"]["earth_radius"]} m")
+    content.append(f"Gravitational Constant:     {config['earth_constants']['gravitational_constant']}")
+    content.append(f"Earth Mass:                 {config['earth_constants']['mass_earth']} kg")
+    content.append(f"Earth Radius:               {config['earth_constants']['earth_radius']} m")
     content.append("")
     
     if material_name:
@@ -504,13 +487,13 @@ def _create_material_comparison_conditions_content(fast_mode=False, component_ma
     
     content.append("="*70)
     content.append("COMMON SIMULATION PARAMETERS")
-    content.append("="*70)
-    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
-    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
-    content.append(f"Drag Coefficient:           {config["rocket"]["drag_coefficient"]}")
-    content.append(f"ISP Sea Level:              {config["engine"]["isp_sea"]} s")
-    content.append(f"ISP Vacuum:                 {config["engine"]["isp_vac"]} s")
-    content.append(f"Fuel Flow Rate:             {config["engine"]["fuel_flow_rate"]} kg/s")
+    content.append("=" * 70)
+    content.append(f"Time Step (dt):             {config['simulation']['dt']} s")
+    content.append(f"Max Dynamic Pressure:       {config['rocket']['max_q']} Pa")
+    content.append(f"Drag Coefficient:           {config['rocket']['drag_coefficient']}")
+    content.append(f"ISP Sea Level:              {config['engine']['isp_sea']} s")
+    content.append(f"ISP Vacuum:                 {config['engine']['isp_vac']} s")
+    content.append(f"Fuel Flow Rate:             {config['engine']['fuel_flow_rate']} kg/s")
     content.append("")
     
     if component_manager and component_manager.get_component_data():
@@ -610,8 +593,8 @@ def _create_trajectory_conditions_content(target_altitude=100000, component_mana
     content.append("="*70)
     content.append(f"Material Used:              {getattr(config, 'fin_material', 'Titanium Ti-6Al-4V')}")
     content.append("Fast Mode:                  True")
-    content.append(f"Time Step (dt):             {config["simulation"]["dt"]} s")
-    content.append(f"Max Dynamic Pressure:       {config["rocket"]["max_q"]} Pa")
+    content.append(f"Time Step (dt):             {config['simulation']['dt']} s")
+    content.append(f"Max Dynamic Pressure:       {config['rocket']['max_q']} Pa")
     content.append("")
     
     if component_manager and component_manager.get_component_data():
@@ -1504,10 +1487,18 @@ def main_menu():
     menu_time = time.time() - menu_start
     print(f"Menu session lasted {menu_time:.3f} seconds")
             
+
+def main() -> None:
+    execution_start = time.time()
+    bootstrap()
+    main_menu()
+    execution_time = time.time() - execution_start
+    print(f"\nTotal program execution time: {execution_time:.3f} seconds")
+    
 if __name__ == "__main__":
     execution_start = time.time()
     bootstrap()
-    
+
     parser = argparse.ArgumentParser(description="Rocket Analysis Tools (Optimized)")
     parser.add_argument("-m", "--material", help="Specify fin material")
     parser.add_argument("-c", "--compare", action="store_true", help="Run material comparison")
@@ -1516,7 +1507,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--stability", action="store_true", help="Run stability analysis")
     parser.add_argument("--stage", help="Flight stage for stability analysis (launch, burnout, apogee, landing)")
     parser.add_argument("-t", "--team-data", action="store_true", help="Manage team component data")
-    
+
     args = parser.parse_args()
 
     if args.interactive:
@@ -1531,7 +1522,6 @@ if __name__ == "__main__":
         run_single_material_analysis(args.material, fast_mode=args.fast)
     else:
         run_single_material_analysis(fast_mode=args.fast)
-    
+
     execution_time = time.time() - execution_start
     print(f"\nTotal program execution time: {execution_time:.3f} seconds")
-    
