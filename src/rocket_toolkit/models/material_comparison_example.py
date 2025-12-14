@@ -7,8 +7,8 @@ from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracke
 from src.rocket_toolkit.core import flight_simulator
 import time
 
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-config_path = os.path.join(project_root, 'src', 'rocket_toolkit', 'config.json')
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+config_path = os.path.join(project_root, 'config.json')
 with open(config_path, 'r') as f:
     config = json.load(f)
 

@@ -14,7 +14,7 @@ from src.rocket_toolkit.plotting.fin_animation import create_fin_temperature_ani
 from src.rocket_toolkit.core.stability_analyzer import RocketStability, plot_rocket_stability
 from src.rocket_toolkit.geometry.component_manager import ComponentData
 from src.rocket_toolkit.core.trajectory_optimizer import TrajectoryOptimizer
-from docs.examples import material_comparison_example
+from src.rocket_toolkit.models import material_comparison_example
 
 CONFIG_FILE = "src/rocket_toolkit/config.json"
 EDITABLE_KEYS = {"paths": ["team_data", "output"], 
@@ -148,24 +148,23 @@ def apply_preset_menu():
     if confirm not in ("y", "yes"):
         print("Aborted.")
         return
-
     apply_preset_to_config(config, preset)
     save_config(config)
     print(f"Preset '{preset_name}' applied and saved.")
+
 
 def apply_preset_to_config(config, preset):
     components_from_preset = preset.get("components", {})
     if isinstance(components_from_preset, dict):
         config["components"] = {}
         for name, data in components_from_preset.items():
-            config["components"][name] = dict(data)  # shallow copy
+            config["components"][name] = dict(data)
     else:
         config["components"] = {}
 
     for section, values in preset.items():
         if section == "components":
-            continue  # already handled above
-
+            continue
         if isinstance(values, dict):
             base_section = config.get(section, {})
             if not isinstance(base_section, dict):
@@ -175,6 +174,28 @@ def apply_preset_to_config(config, preset):
             config[section] = base_section
         else:
             config[section] = values
+            
+    dry_mass = 0.0
+    propellant_mass = 0.0
+
+    components = config.get("components", {})
+    for name, data in components.items():
+        mass = data.get("mass", 0.0)
+        if mass <= 0:
+            continue
+        if "propellant" in name.lower():
+            propellant_mass += mass
+        else:
+            dry_mass += mass
+
+    if propellant_mass == 0:
+        propellant_mass = config.get("mass_properties", {}).get("propellant_mass", 0.0)
+
+    config["dry_mass"] = dry_mass
+    config["propellant_mass"] = propellant_mass
+    config["wet_mass"] = dry_mass + propellant_mass
+
+
 
 def settings_and_materials_menu():
     while True:
@@ -239,14 +260,17 @@ def bootstrap():
 
 def load_team_data():
     load_start = time.time()
+
+    global component_manager, config
+    config = load_config()
+
     component_manager = ComponentData()
     component_manager.update_from_team_files()
     component_manager.update_config(config)
     save_config(config)
-    
+
     load_time = time.time() - load_start
     print(f"Team data loaded in {load_time:.3f} seconds")
-    
     return component_manager
 
 def create_initial_conditions_page(simulation_type, **kwargs):
@@ -918,27 +942,30 @@ def create_material_comparison_pdf(output_path, results, fast_mode=False, compon
             plt.close(fig_conditions)
 
 def run_single_material_analysis(material_name=None, fast_mode=True):
-    analysis_start = time.time()    
+    global config
+    analysis_start = time.time()
+
+    config = load_config()
+
     if material_name is None:
         material_name = config["fin_analysis"]["fin_material"]
-    
-    print(f"\nRunning flight simulation with fin material: {material_name}")    
+
+    print(f"\nRunning flight simulation with fin material: {material_name}")
     component_manager.print_component_summary()
+
     print("\nSetting dynamic pressure parameters for fin calculations...")
-    
     fin_start = time.time()
     fin_material = get_fin_material()
     fin = RocketFin(material_name=fin_material)
-    
+
     fin.max_q = config["rocket"]["max_q"]
-    
     print(f"Setting dynamic pressure (fin.max_q) for fin calculations: {fin.max_q} Pa")
-    
+
     if not fin.set_material(material_name):
         print(f"Error: Material '{material_name}' not found. Using default material.")
         fin.set_material(config["fin_analysis"]["fin_material"])
         material_name = config["fin_analysis"]["fin_material"]
-    
+
     fin.calculate_fin_dimensions(verbose=True)
     fin_time = time.time() - fin_start
     print(f"Fin initialization completed in {fin_time:.3f} seconds")
@@ -946,11 +973,12 @@ def run_single_material_analysis(material_name=None, fast_mode=True):
     tracker = FinTemperatureTracker(fin)
     flight_simulator.fin_tracker = tracker
     flight_simulator.component_manager = component_manager
-    
+
     sim_start = time.time()
-    flight_simulator.main(material_name=material_name, fast_mode=fast_mode, skip_animation=True)
+    used_material = flight_simulator.init(material_name=material_name, fast_mode=fast_mode)
+    limit_reached = flight_simulator.run_simulation()
     sim_time = time.time() - sim_start
-    
+
     output_dir = "output"
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)

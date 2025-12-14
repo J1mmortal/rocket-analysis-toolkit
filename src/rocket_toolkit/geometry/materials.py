@@ -9,7 +9,7 @@ class MaterialsDatabase:
         print("Loading materials from:", config_path)
         with open(config_path, "r") as f:
             config = json.load(f)
-        self.materials_db = config.get("materials", {})        
+        self.materials_db = config.get("materials", {})   
         
     def get_material_properties(self, material_name):
         if material_name in self.materials_db:

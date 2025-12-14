@@ -20,9 +20,9 @@
     "q0": 0
   },
   "engine": {
-    "isp_sea": 210,
-    "isp_vac": 260,
-    "fuel_flow_rate": 1.0
+    "isp_sea": 235,
+    "isp_vac": 300,
+    "fuel_flow_rate": 4.4
   },
   "rocket": {
     "drag_coefficient": 0.5,
@@ -62,7 +62,7 @@
     },
     "propellant": {
       "mass": 244.08,
-      "position": 3.0,
+      "position": 3,
       "team": "fuselage",
       "description": "propellant from fuel and oxidator together"
     },
@@ -74,7 +74,7 @@
     },
     "fuselage_shell": {
       "mass": 60.25,
-      "position": 4.0,
+      "position": 4,
       "team": "fuselage",
       "description": "surrounding shell around components"
     },
@@ -168,24 +168,6 @@
       "yield_strength": 500,
       "thermal_expansion": 4e-06,
       "emissivity": 0.9
-    },
-    "Fancy material": {
-      "thermal_conductivity": 10.0,
-      "density": 1000.0,
-      "specific_heat": 500.0,
-      "max_service_temp": 900.0,
-      "yield_strength": 240.0,
-      "thermal_expansion": 2.2e-06,
-      "emissivity": 0.3
-    },
-    "eiusfgsg": {
-      "thermal_conductivity": 4.0,
-      "density": 100000000.0,
-      "specific_heat": 4.0,
-      "max_service_temp": 4.0,
-      "yield_strength": 4.0,
-      "thermal_expansion": 4.0,
-      "emissivity": 4.0
     }
   },
   "presets": {
@@ -258,9 +240,9 @@
         }
       },
       "engine": {
-        "isp_sea": 210,
-        "isp_vac": 260,
-        "fuel_flow_rate": 1.0
+        "isp_sea": 235,
+        "isp_vac": 300,
+        "fuel_flow_rate": 4.4
       },
       "fin_analysis": {
         "fin_material": "Titanium Ti-6Al-4V"

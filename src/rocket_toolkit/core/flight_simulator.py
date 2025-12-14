@@ -9,7 +9,7 @@ from src.rocket_toolkit.core.fin_temperature_tracker import FinTemperatureTracke
 from src.rocket_toolkit.core.stability_analyzer import RocketStability
 from src.rocket_toolkit.geometry.component_manager import ComponentData
 from src.rocket_toolkit.plotting import fin_animation
-import docs.examples.material_comparison_example
+import src.rocket_toolkit.models.material_comparison_example
 import isacalc as isa
 
 std_atm = isa.Atmosphere()
@@ -24,10 +24,11 @@ mesh_size = 20
 
 _cache = {}
 _atmosphere_cache = {}
-
 config_path = os.path.join(os.path.dirname(__file__), '..', 'config.json')
-with open(config_path, 'r') as f:
-    config = json.load(f)
+
+def load_config_fs():
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
 def get_cached_atmosphere(altitude):
     global _atmosphere_cache
@@ -67,15 +68,14 @@ class earth_constants:
         self.earth_radius = earth_radius
 
 def load_component_data():
-    global component_manager
-    if component_manager is None:
-        pass
-
+    global config
     dry_mass = config.get("dry_mass")
     propellant_mass = config.get("propellant_mass")
+
     if dry_mass is None or propellant_mass is None:
         dry_mass = 0.0
         propellant_mass = 0.0
+
         components = config.get("components", {})
         for name, data in components.items():
             mass = data.get("mass", 0.0)
@@ -86,8 +86,8 @@ def load_component_data():
             else:
                 dry_mass += mass
 
-    if propellant_mass == 0:
-        propellant_mass = config.get("mass_properties", {}).get("propellant_mass", 0.0)
+        if propellant_mass == 0:
+            propellant_mass = config.get("mass_properties", {}).get("propellant_mass", 0.0)
 
     min_realistic_dry_weight = 30.0
     if dry_mass < min_realistic_dry_weight:
@@ -95,6 +95,7 @@ def load_component_data():
         print("Consider increasing structural component masses for more realistic results.")
 
     return dry_mass, propellant_mass
+
 
 
 def altitude_adjusted_isp(r1, isp_sea, isp_vac):
@@ -161,7 +162,8 @@ def dynamic_pressure(r1):
 
 def init(material_name=None, fast_mode=False):
     init_start = time.time()
-    global r, rc, ec, time_points, fin_tracker, component_manager
+    global r, rc, ec, time_points, fin_tracker, component_manager, config
+    config = load_config_fs()
     time_points = [0]
     dry_weight, propellant_mass = load_component_data()
     atm_data = get_cached_atmosphere(config["simulation"]["h0"])
@@ -222,7 +224,8 @@ def init(material_name=None, fast_mode=False):
 def run_simulation():
     sim_start = time.time()
     global r, time_points
-    
+    #print("5: DEBUG engine used:", config["engine"])
+
     t = 0
     burn_time = r[0].fuel_mass / rc.fuel_flow_rate if rc.fuel_flow_rate > 0 else 0  # seconds
     
@@ -308,8 +311,9 @@ def run_simulation():
             }
     
     sim_time = time.time() - sim_start
+    altitudes = np.array([i.altitude for i in r])
     if not hasattr(fin_tracker.thermal_analyzer, 'is_comparison_mode') or not fin_tracker.thermal_analyzer.is_comparison_mode:
-        print(f"Flight simulation completed in {sim_time:.3f} seconds ({iteration_count} iterations)")
+        print(f"Flight simulation completed in {sim_time:.3f} seconds ({iteration_count} iterations)\nAltitude reached: {np.max(altitudes):.3f} meters\n")
     
     return limit_reached
 
@@ -532,7 +536,7 @@ def plot_stability_during_flight():
 def report(limit_reached):
     report_start = time.time()
     
-    if len(r) < 2:  # Make sure we have data
+    if len(r) < 2:  #make sure we have data
         print("No simulation data available for report.")
         return
     
@@ -547,7 +551,6 @@ def report(limit_reached):
     speeds = np.array([i.speed for i in r])
     dynamic_pressures = np.array([i.dynamic_pressure for i in r])
     nose_cone_temps = np.array([i.nose_cone_temp for i in r])
-    
     max_dynamic_pressure = np.max(dynamic_pressures)
     print(f"\nMaximum dynamic pressure encountered during flight: {max_dynamic_pressure:.1f} Pa")
     print(f"Dynamic pressure used for fin sizing (fixed): {config["rocket"]["max_q"]:.1f} Pa")
