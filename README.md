@@ -1,6 +1,6 @@
 # Rocket Analysis Toolkit – README
 
-This project provides an end‑to‑end analysis pipeline for a high‑power rocket, driven entirely from an interactive command‑line menu. The code combines team‑provided component data, fin geometry and material selection, flight simulation, thermal analysis, stability analysis, and trajectory optimization into a single workflow controlled via `main.py`.
+This project provides an end‑to‑end analysis pipeline for a high‑power (single stage) rocket, driven entirely from an interactive command‑line menu. The code combines team‑provided component data, fin geometry and material selection, flight simulation, thermal analysis, stability analysis, and trajectory optimization into a single workflow controlled via one input command.
 
 ---
 
@@ -11,7 +11,7 @@ Clone the repository and ensure Python and required scientific libraries (NumPy,
 Basic usage (recommended):
 
 '''bash
-python main.py -I
+rocket_toolkit
 '''
 
 This starts the interactive menu and is the only interface a user needs for running simulations and managing settings; all other command‑line flags exist for advanced or scripted usage.
@@ -58,7 +58,7 @@ Menu options (simplified):
 
 Each menu choice prints timing information and writes any generated reports to the configured output folder. The expectation is that users:
 
-- Enter via `-i`  
+- Enter via `rocket_toolkit`  
 - Use “Manage team component data” to set up and load team inputs  
 - Use “Configure settings” and “Apply rocket preset” to define a baseline rocket  
 - Then run simulations, comparisons, stability, and trajectory tools from the same menu.
@@ -69,7 +69,7 @@ Each menu choice prints timing information and writes any generated reports to t
 
 ### 4.1 Config Settings
 
-The interactive “Configure settings” submenu (`settingsandmaterialsmenu`) lets the user:
+The interactive “Configure settings” submenu (`settings_and_materials_menu`) lets the user:
 
 - Edit selected keys from `config.json` (paths, initial conditions, engine parameters, rocket geometry, and selected simulation/stability thresholds).  
 - Add new fin materials to the materials database stored inside `config.json`.  
