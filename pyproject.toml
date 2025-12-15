@@ -13,7 +13,7 @@ rocket_toolkit = ["default_config.json"]
 
 [project]
 name = "rocket_toolkit"
-version = "0.1.2"
+version = "0.2.0"
 description = "Rocket analysis tools with interactive CLI menu"
 readme = "README.md"
 requires-python = ">=3.10"

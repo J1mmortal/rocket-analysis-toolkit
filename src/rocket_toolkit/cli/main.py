@@ -1289,9 +1289,10 @@ def manage_team_data():
             print("Distribute these files to the respective teams to fill in their component data")
         elif choice == '2':
             load_start = time.time()
+            cfg = load_config()
             component_manager.update_from_team_files()
-            component_manager.update_config(config)
-            save_config(config)
+            component_manager.update_config(cfg)
+            save_config(cfg)
             load_time = time.time() - load_start
             print(f"\nTeam data loaded and config updated in {load_time:.3f} seconds")
         elif choice == '3':
